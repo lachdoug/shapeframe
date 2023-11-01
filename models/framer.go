@@ -36,9 +36,13 @@ func FramerNew(w *Workspace, path string, name string) (fr *Framer) {
 
 // Inspection
 
-func (fr *Framer) Inspect() (fri *FramerInspector) {
+func (fr *Framer) Inspect() (fri *FramerInspector, err error) {
+	var uri string
+	if uri, err = fr.URI(); err != nil {
+		return
+	}
 	fri = &FramerInspector{
-		URI:   fr.URI(),
+		URI:   uri,
 		Name:  fr.Name,
 		About: fr.About,
 	}
@@ -47,8 +51,12 @@ func (fr *Framer) Inspect() (fri *FramerInspector) {
 
 // Data
 
-func (fr *Framer) URI() (uri string) {
-	uri = utils.GitRepoURI(fr.Path) + "#" + fr.Name
+func (fr *Framer) URI() (uri string, err error) {
+	var gruri string
+	if gruri, err = utils.GitRepoURI(fr.Path); err != nil {
+		return
+	}
+	uri = gruri + "#" + fr.Name
 	return
 }
 

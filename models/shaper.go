@@ -36,9 +36,13 @@ func ShaperNew(w *Workspace, path string, name string) (sr *Shaper) {
 
 // Inspection
 
-func (sr *Shaper) Inspect() (sri *ShaperInspector) {
+func (sr *Shaper) Inspect() (sri *ShaperInspector, err error) {
+	var uri string
+	if uri, err = sr.URI(); err != nil {
+		return
+	}
 	sri = &ShaperInspector{
-		URI:   sr.URI(),
+		URI:   uri,
 		Name:  sr.Name,
 		About: sr.About,
 	}
@@ -47,8 +51,12 @@ func (sr *Shaper) Inspect() (sri *ShaperInspector) {
 
 // Data
 
-func (sr *Shaper) URI() (uri string) {
-	uri = utils.GitRepoURI(sr.Path) + "#" + sr.Name
+func (sr *Shaper) URI() (uri string, err error) {
+	var gruri string
+	if gruri, err = utils.GitRepoURI(sr.Path); err != nil {
+		return
+	}
+	uri = gruri + "#" + sr.Name
 	return
 }
 

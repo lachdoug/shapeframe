@@ -135,7 +135,7 @@ func (s *Shape) SetShaper() (err error) {
 	if sr, err = s.ShaperFind(); err != nil {
 		return
 	} else if sr == nil {
-		err = app.Error(nil, "failed to locate shaper %s in workspace %s", s.ShaperName, s.Frame.Workspace.Name)
+		err = app.Error(nil, "locate shaper %s: no such shaper in workspace %s", s.ShaperName, s.Frame.Workspace.Name)
 		return
 	} else {
 		sr.Load()

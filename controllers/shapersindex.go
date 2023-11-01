@@ -42,10 +42,14 @@ func ShapersIndex(jparams []byte) (jbody []byte, v *app.Validation, err error) {
 	}
 
 	result := []*ShapersIndexItemResult{}
+	var uri string
 	for _, sr := range srs {
+		if uri, err = sr.URI(); err != nil {
+			return
+		}
 		result = append(result, &ShapersIndexItemResult{
 			Workspace: sr.Workspace.Name,
-			URI:       sr.URI(),
+			URI:       uri,
 			About:     sr.About,
 		})
 	}

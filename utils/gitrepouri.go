@@ -4,8 +4,11 @@ import (
 	"strings"
 )
 
-func GitRepoURI(dirPath string) (uri string) {
-	url := GitRepoURL(dirPath)
+func GitRepoURI(dirPath string) (uri string, err error) {
+	var url string
+	if url, err = GitRepoURL(dirPath); err != nil {
+		return
+	}
 	if url[0:4] == "git@" {
 		uri = strings.Replace(
 			strings.TrimSuffix(

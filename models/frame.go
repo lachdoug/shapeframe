@@ -147,7 +147,7 @@ func (f *Frame) SetFramer() (err error) {
 	if fr, err = f.FramerFind(); err != nil {
 		return
 	} else if fr == nil {
-		err = app.Error(nil, "failed to locate framer %s in workspace %s", f.FramerName, f.Workspace.Name)
+		err = app.Error(nil, "locate framer %s: no such framer in workspace %s", f.FramerName, f.Workspace.Name)
 		return
 	} else {
 		fr.Load()

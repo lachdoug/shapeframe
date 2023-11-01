@@ -19,7 +19,7 @@ func Connect() {
 		Logger: fileLogger(),
 	})
 	if err != nil {
-		log.Fatal("failed to connect to database")
+		log.Fatal("connect to database: no connection")
 	}
 }
 

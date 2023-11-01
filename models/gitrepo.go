@@ -60,11 +60,15 @@ func (g *GitRepo) Inspect() (gri *GitRepoInspector, err error) {
 func (g *GitRepo) ShapersInspect() (sris []*ShaperInspector, err error) {
 	var srs []*Shaper
 	sris = []*ShaperInspector{}
+	var sri *ShaperInspector
 	if srs, err = g.Shapers(); err != nil {
 		return
 	}
 	for _, sr := range srs {
-		sris = append(sris, sr.Inspect())
+		if sri, err = sr.Inspect(); err != nil {
+			return
+		}
+		sris = append(sris, sri)
 	}
 	return
 }
@@ -72,11 +76,15 @@ func (g *GitRepo) ShapersInspect() (sris []*ShaperInspector, err error) {
 func (g *GitRepo) FramersInspect() (fris []*FramerInspector, err error) {
 	var frs []*Framer
 	fris = []*FramerInspector{}
+	var fri *FramerInspector
 	if frs, err = g.Framers(); err != nil {
 		return
 	}
 	for _, fr := range frs {
-		fris = append(fris, fr.Inspect())
+		if fri, err = fr.Inspect(); err != nil {
+			return
+		}
+		fris = append(fris, fri)
 	}
 	return
 }
@@ -102,12 +110,21 @@ func (g *GitRepo) isExists() (is bool) {
 	return
 }
 
-func (g *GitRepo) load() {
-	fmt.Println(g.Path)
-
-	g.URI = utils.GitRepoURI(g.Path)
-	g.URL = utils.GitRepoURL(g.Path)
-	g.Branch = utils.GitRepoBranch(g.Path)
+func (g *GitRepo) load() (err error) {
+	var uri, url, branch string
+	if uri, err = utils.GitRepoURI(g.Path); err != nil {
+		return
+	}
+	if url, err = utils.GitRepoURL(g.Path); err != nil {
+		return
+	}
+	if branch, err = utils.GitRepoBranch(g.Path); err != nil {
+		return
+	}
+	g.URI = uri
+	g.URL = url
+	g.Branch = branch
+	return
 }
 
 func (g *GitRepo) remove() (err error) {

@@ -42,10 +42,14 @@ func FramersIndex(jparams []byte) (jbody []byte, v *app.Validation, err error) {
 	}
 
 	result := []*FramersIndexItemResult{}
+	var uri string
 	for _, fr := range frs {
+		if uri, err = fr.URI(); err != nil {
+			return
+		}
 		result = append(result, &FramersIndexItemResult{
 			Workspace: fr.Workspace.Name,
-			URI:       fr.URI(),
+			URI:       uri,
 			About:     fr.About,
 		})
 	}

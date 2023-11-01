@@ -7,6 +7,9 @@ import (
 
 func SubDirs(dirPath string) (dirNames []string) {
 	var ents []fs.DirEntry
+	if !IsDir(dirPath) {
+		return
+	}
 	ents, err := os.ReadDir(dirPath)
 	checkErr(err)
 	dirNames = []string{}
