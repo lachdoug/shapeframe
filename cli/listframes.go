@@ -4,14 +4,26 @@ import (
 	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
+	"sf/models"
 )
 
 func listFrames() (command any) {
 	command = &cliapp.Command{
-		Name:        "frames",
-		Summary:     "List frames",
-		Aliases:     ss("f"),
-		Flags:       ss("bool", "w", "Limit list to workspace"),
+		Name:    "frames",
+		Summary: "List frames",
+		Aliases: ss("f"),
+		Usage: ss(
+			"sf list frames [options]",
+			"Provide an optional workspace name using the -workspace flag",
+			"  Uses workspace context when not provided",
+			"List frames in all workspaces by setting the -all flag",
+			"  Otherwise lists frames in workspace context",
+			"  Overrides -workspace flag",
+		),
+		Flags: ss(
+			"string", "workspace", "Workspace name",
+			"bool", "all", "All workspaces",
+		),
 		Parametizer: listFramesParams,
 		Controller:  controllers.FramesIndex,
 		Viewer:      listFramesViewer,
@@ -19,27 +31,39 @@ func listFrames() (command any) {
 	return
 }
 
-func listFramesParams(context *cliapp.Context) (jparams []byte, validation *app.Validation, err error) {
-	jparams = jsonParams(map[string]any{
-		"Workspace": context.BoolFlag("w"),
-	})
+func listFramesParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+	var w *models.Workspace
+	all := context.BoolFlag("all")
+	workspace := context.StringFlag("workspace")
+	params := map[string]any{}
+
+	if !all {
+		uc := models.ResolveUserContext(
+			"Workspace",
+			"Workspaces",
+		)
+		if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
+			return
+		}
+		params["Workspace"] = w.Name
+	}
+
+	jparams = jsonParams(params)
 	return
 }
 
 func listFramesViewer(body map[string]any) (output string, er error) {
 	table := &Table{
 		Items:  resultItems(body),
-		Titles: ss(" ", "FRAME", "WORKSPACE", "FRAMER", "ABOUT"),
-		Keys:   ss("IsContext", "Name", "Workspace", "Framer", "About"),
+		Titles: ss("FRAME", "WORKSPACE", "FRAMER", "ABOUT"),
+		Keys:   ss("Name", "Workspace", "Framer", "About"),
 		Values: tvs(
-			tableCellAsteriskIfTrueValueFn,
 			tableCellStringValueFn,
 			tableCellStringValueFn,
 			tableCellStringValueFn,
 			tableCellStringValueFn,
 		),
 		Accents: tas(
-			tableCellNoAccentFn,
 			tableCellGreenIfInContextAccentFn,
 			tableCellGreenIfInContextAccentFn,
 			tableCellNoAccentFn,

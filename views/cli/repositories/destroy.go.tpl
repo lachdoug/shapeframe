@@ -1,3 +1,5 @@
-{{ with index . "Result" -}}
-Removed repository {{ index . "URI" }} from workspace {{ index . "Workspace" }}
+{{ define "repositories/destroy" -}}
+{{ with .Result -}}
+Successfully removed repository {{ .URI }} from workspace {{ .Workspace }}
+{{ end -}}
 {{ end -}}

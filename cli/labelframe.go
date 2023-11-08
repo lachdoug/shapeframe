@@ -12,37 +12,59 @@ func labelFrame() (command any) {
 		Name:    "frame",
 		Summary: "Change name and/or about for frame",
 		Aliases: ss("f"),
+		Usage: ss(
+			"sf label frame [options] [name]",
+			"Provide an optional frame name as an argument",
+			"  Uses frame context when not provided",
+			"Provide an optional workspace name using the -workspace flag",
+			"  Uses workspace context when not provided",
+			"Provide an optional frame update name using the -name flag",
+			"Provide an optional frame update about using the -about flag",
+		),
 		Flags: ss(
-			"string", "name", "New name",
-			"string", "about", "New about",
+			"string", "workspace", "Name of the workspace",
+			"string", "name", "New name for the frame",
+			"string", "about", "New about for the frame",
 		),
 		Parametizer: labelFrameParams,
 		Controller:  controllers.FramesUpdate,
-		Viewer:      cliapp.View("frames/update"),
+		Viewer:      cliapp.View("frames/update", "labels/label"),
 	}
 	return
 }
 
-func labelFrameParams(context *cliapp.Context) (jparams []byte, validation *app.Validation, err error) {
-	uc := models.UserContextNew()
-	uc.Load("Workspace", "Frame")
+func labelFrameParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+	var w *models.Workspace
+	var f *models.Frame
+	frame := context.Argument(0)
+	workspace := context.StringFlag("workspace")
 
-	w := uc.Workspace
-	if w == nil {
-		err = app.Error(nil, "no workspace context")
+	uc := models.ResolveUserContext(
+		"Frame",
+		"Workspace.Frames",
+		"Workspaces.Frames",
+	)
+	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
 		return
 	}
-	f := uc.Frame
-	if f == nil {
-		err = app.Error(nil, "no frame context")
+	if f, err = models.ResolveFrame(uc, w, frame); err != nil {
 		return
 	}
 
-	jparams = jsonParams(map[string]any{
+	update := map[string]any{}
+	if context.IsSet("name") {
+		update["Name"] = context.StringFlag("name")
+	}
+	if context.IsSet("about") {
+		update["About"] = context.StringFlag("about")
+	}
+
+	params := map[string]any{
 		"Workspace": w.Name,
 		"Frame":     f.Name,
-		"Name":      context.StringFlag("name"),
-		"About":     context.StringFlag("about"),
-	})
+		"Update":    update,
+	}
+
+	jparams = jsonParams(params)
 	return
 }

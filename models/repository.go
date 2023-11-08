@@ -1,9 +1,13 @@
 package models
 
+import "sf/app"
+
 type Repository struct {
 	Workspace *Workspace
 	Path      string
 	GitRepo   *GitRepo
+	Framers   []*Framer
+	Shapers   []*Shaper
 }
 
 type RepositoryInspector struct {
@@ -13,35 +17,64 @@ type RepositoryInspector struct {
 
 // Construction
 
-func RepositoryNew(w *Workspace, path string) (r *Repository) {
-	if w == nil {
-		panic("Repository Workspace is <nil>")
-	}
+func NewRepository(w *Workspace, path string) (r *Repository) {
 	r = &Repository{
 		Workspace: w,
 		Path:      path,
-		GitRepo:   GitRepoNew(w, path),
+	}
+	return
+}
+
+func CreateRepository(w *Workspace, uri string, ssh bool, st *Stream) (r *Repository, err error) {
+	path := w.GitRepoDirectoryFor(uri)
+	r = NewRepository(w, path)
+	if err = r.Load("GitRepo"); err != nil {
+		return
+	}
+	if r.IsExists() {
+		err = app.Error("repository %s already exists in workspace %s", uri, w.Name)
+		return
+	}
+	r.Create(uri, ssh, st)
+	return
+}
+
+func ResolveRepository(w *Workspace, uri string, loads ...string) (r *Repository, err error) {
+	if w == nil {
+		err = app.Error("no workspace")
+		return
+	}
+	if len(w.Repositories) == 0 {
+		err = app.Error("no repositories exist in workspace %s", w.Name)
+		return
+	}
+	path := w.GitRepoDirectoryFor(uri)
+	r = w.FindRepository(path)
+	if r == nil {
+		err = app.Error("repository %s does not exist in workspace %s", uri, w.Name)
+		return
+	}
+	if len(loads) > 0 {
+		if err = r.Load(loads...); err != nil {
+			return
+		}
 	}
 	return
 }
 
 // Inspection
 
-func (r *Repository) Inspect() (ri *RepositoryInspector, err error) {
-	var gri *GitRepoInspector
-	if gri, err = r.GitRepoInspect(); err != nil {
-		return
-	}
+func (r *Repository) Inspect() (ri *RepositoryInspector) {
 	ri = &RepositoryInspector{
 		Path:    r.Path,
-		GitRepo: gri,
+		GitRepo: r.GitRepoInspect(),
 	}
 	return
 }
 
-func (r *Repository) GitRepoInspect() (gri *GitRepoInspector, err error) {
+func (r *Repository) GitRepoInspect() (gri *GitRepoInspector) {
 	if r.GitRepo.isExists() {
-		gri, err = r.GitRepo.Inspect()
+		gri = r.GitRepo.Inspect()
 	}
 	return
 }
@@ -53,36 +86,20 @@ func (r *Repository) IsExists() (is bool) {
 	return
 }
 
-func (r *Repository) Load() {
-	// gr := GitRepoNew(r.Workspace, r.Path)
-	// gr.load()
-	r.GitRepo.load()
+func (r *Repository) Load(loads ...string) (err error) {
+	dl := NewRepositoryLoader(r, loads)
+	err = dl.load()
+	return
 }
 
-func (r *Repository) Create(s *Stream, uri string, ssh bool) {
-	go r.GitRepo.clone(s, uri, ssh)
+func (r *Repository) Create(uri string, ssh bool, st *Stream) {
+	go r.GitRepo.clone(uri, ssh, st)
 }
 
-func (r *Repository) Update(s *Stream) {
-	go r.GitRepo.pull(s)
+func (r *Repository) Update(st *Stream) {
+	go r.GitRepo.pull(st)
 }
 
 func (r *Repository) Destroy() {
 	r.GitRepo.remove()
-}
-
-// Associations
-
-func (r *Repository) Framers() (frs []*Framer, err error) {
-	if r.GitRepo != nil {
-		frs, err = r.GitRepo.Framers()
-	}
-	return
-}
-
-func (r *Repository) Shapers() (frs []*Shaper, err error) {
-	if r.GitRepo != nil {
-		frs, err = r.GitRepo.Shapers()
-	}
-	return
 }

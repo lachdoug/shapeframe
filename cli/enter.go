@@ -9,31 +9,43 @@ import (
 
 func enter() (command any) {
 	command = &cliapp.Command{
-		Name:        "enter",
-		Summary:     "Enter shape, frame or workspace",
-		Aliases:     ss("en"),
+		Name:    "enter",
+		Summary: "Enter shape, frame or workspace",
+		Aliases: ss("en"),
+		Usage: ss(
+			"sf enter [options] [name]",
+			"A name must be provided as an argument",
+			"  When no context, the name must be a workspace name",
+			"  When workspace context, the name must be a frame name",
+			"  When frame context, the name must be a shape name",
+		),
 		Parametizer: enterParams,
 		Controller:  controllers.ContextsUpdate,
-		Viewer:      cliapp.View("contexts/update"),
+		Viewer: cliapp.View(
+			"contexts/update",
+			"contexts/from",
+			"contexts/to",
+			"contexts/context",
+		),
 	}
 	return
 }
 
-func enterParams(context *cliapp.Context) (jparams []byte, validation *app.Validation, err error) {
+func enterParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
 	name := context.Argument(0)
-	validation = &app.Validation{}
+	params := map[string]any{}
+
+	vn = &app.Validation{}
 	if name == "" {
-		validation.Add("Name", "must not be blank")
+		vn.Add("Name", "must not be blank")
 	}
-	if validation.IsInvalid() {
+	if vn.IsInvalid() {
 		return
 	}
 
-	params := map[string]any{}
-
-	uc := models.UserContextNew()
-	uc.Load("Workspace", "Frame", "Shape")
-
+	uc := models.ResolveUserContext(
+		"Workspace", "Frame", "Shape",
+	)
 	if uc.Workspace == nil {
 		params["Workspace"] = name
 	} else if uc.Frame == nil {
@@ -44,7 +56,7 @@ func enterParams(context *cliapp.Context) (jparams []byte, validation *app.Valid
 		params["Frame"] = uc.Frame.Name
 		params["Shape"] = name
 	} else {
-		err = app.Error(err, "has shape context so nothing to enter")
+		err = app.ErrorWith(err, "has shape context so nothing to enter")
 		return
 	}
 

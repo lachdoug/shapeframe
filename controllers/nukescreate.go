@@ -5,7 +5,7 @@ import (
 	"sf/utils"
 )
 
-func NukesCreate(jparams []byte) (jbody []byte, validation *app.Validation, err error) {
+func NukesCreate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
 	utils.RemoveDir(utils.DataDir("."))
 	return
 }

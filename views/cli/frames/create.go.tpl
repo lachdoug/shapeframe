@@ -1,3 +1,5 @@
-{{ with index . "Result" -}}
-Created frame {{ index . "Name" }} in workspace {{ index . "Workspace" }}
+{{ define "frames/create" -}}
+{{ with .Result -}}
+Successfully added frame {{ .Frame }} to workspace {{ .Workspace }}
+{{ end -}}
 {{ end -}}

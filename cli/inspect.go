@@ -2,16 +2,18 @@ package cli
 
 import (
 	"sf/cli/cliapp"
-	"sf/controllers"
 )
 
-func inspect() (command any) {
-	command = &cliapp.Command{
-		Name:       "inspect",
-		Summary:    "Inspect workspace",
-		Aliases:    ss("i"),
-		Controller: controllers.WorkspacesRead,
-		Viewer:     cliapp.View("workspaces/read"),
+func inspect() (commandset any) {
+	commandset = &cliapp.CommandSet{
+		Name:    "inspect",
+		Aliases: ss("i"),
+		Summary: "Inspect a shape, frame, workspace, shaper or framer",
+		Commands: cs(
+			// inspectShape,
+			// inspectFrame,
+			inspectWorkspace,
+		),
 	}
 	return
 }

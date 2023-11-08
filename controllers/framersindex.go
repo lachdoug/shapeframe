@@ -3,11 +3,10 @@ package controllers
 import (
 	"sf/app"
 	"sf/models"
-	"sf/utils"
 )
 
 type FramersIndexParams struct {
-	Workspace bool // Limit list to workspace context
+	Workspace string // Limit list to workspace
 }
 
 type FramersIndexItemResult struct {
@@ -16,29 +15,30 @@ type FramersIndexItemResult struct {
 	About     string
 }
 
-func FramersIndex(jparams []byte) (jbody []byte, v *app.Validation, err error) {
+func FramersIndex(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
 	var frs []*models.Framer
+	params := paramsFor[FramersIndexParams](jparams)
 
-	params := &FramersIndexParams{}
-	utils.JsonUnmarshal(jparams, params)
-
-	uc := models.UserContextNew()
-	uc.Load("Workspace")
-	if params.Workspace {
-		uc.Load("Workspace.Directories.Workspace")
-		if uc.Workspace == nil {
-			err = app.Error(nil, "no workspace context")
-			return
-		}
-		w := uc.Workspace
-		if frs, err = w.Framers(); err != nil {
-			return
+	uc := models.ResolveUserContext(
+		"Workspace",
+		"Workspaces",
+	)
+	if params.Workspace == "" {
+		for _, w := range uc.Workspaces {
+			if err = w.Load("Framers"); err != nil {
+				return
+			}
+			frs = append(frs, w.Framers...)
 		}
 	} else {
-		uc.Load("Workspaces.Directories.Workspace")
-		if frs, err = uc.Framers(); err != nil {
+		var w *models.Workspace
+		if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
 			return
 		}
+		if err = w.Load("Framers"); err != nil {
+			return
+		}
+		frs = w.Framers
 	}
 
 	result := []*FramersIndexItemResult{}
@@ -54,7 +54,6 @@ func FramersIndex(jparams []byte) (jbody []byte, v *app.Validation, err error) {
 		})
 	}
 
-	body := &app.Body{Result: result}
-	jbody = utils.JsonMarshal(body)
+	jbody = jbodyFor(result)
 	return
 }

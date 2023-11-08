@@ -1,3 +1,5 @@
-{{ with index . "Result" -}}
-Destroyed shape {{ index . "Name" }} in frame {{ index . "Frame" }}
+{{ define "shapes/destroy" -}}
+{{ with .Result -}}
+Successfully removed shape {{ .Shape }} from frame {{ .Frame }} workspace {{ .Workspace }}
+{{ end -}}
 {{ end -}}

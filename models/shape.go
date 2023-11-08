@@ -11,34 +11,83 @@ import (
 )
 
 type Shape struct {
-	ID         uint `gorm:"primaryKey"`
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	DeletedAt  soft_delete.DeletedAt `gorm:"index:idx_nondeleted_frame_shape,unique"`
-	Frame      *Frame                `gorm:"foreignkey:FrameID"`
-	FrameID    uint                  `gorm:"index:idx_nondeleted_frame_shape,unique"`
-	Name       string                `gorm:"index:idx_nondeleted_frame_shape,unique"`
-	About      string
-	ShaperName string
-	ConfigJson datatypes.JSON
-	Shaper     *Shaper `gorm:"-"`
+	ID                uint `gorm:"primaryKey"`
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	DeletedAt         soft_delete.DeletedAt `gorm:"softDelete:nano;index:idx_nondeleted_frame_shape,unique"`
+	Frame             *Frame                `gorm:"foreignkey:FrameID"`
+	FrameID           uint                  `gorm:"index:idx_nondeleted_frame_shape,unique"`
+	Name              string                `gorm:"index:idx_nondeleted_frame_shape,unique"`
+	About             string
+	ConfigurationJson datatypes.JSON
+	ShaperName        string
+	Shaper            *Shaper `gorm:"-"`
+	Configuration     *Form   `gorm:"-"`
 }
 
 type ShapeInspector struct {
-	Name   string
-	About  string
-	Shaper string
+	Name          string
+	About         string
+	Shaper        string
+	Configuration []map[string]any
 }
 
 // Construction
 
-func ShapeNew(f *Frame, name string) (s *Shape) {
-	if f == nil {
-		panic("Shape Frame is <nil>")
-	}
+func NewShape(f *Frame, name string) (s *Shape) {
 	s = &Shape{
 		Frame: f,
-		Name:  utils.StringTidy(name),
+		Name:  name,
+	}
+	return
+}
+
+func CreateShape(f *Frame, shaper string, name string, about string) (s *Shape, err error) {
+	s = NewShape(f, name)
+	s.ShaperName = shaper
+	s.About = about
+	if err = s.Load("Shaper"); err != nil {
+		return
+	}
+	s.Label()
+	if s.IsExists() {
+		err = app.Error("shape %s already exists in frame %s workspace %s", name, f.Name, f.Workspace.Name)
+		return
+	}
+	s.Create()
+	return
+}
+
+func ResolveShape(uc *UserContext, f *Frame, name string, loads ...string) (s *Shape, err error) {
+	if name == "" {
+		if uc == nil {
+			err = app.Error("no user context")
+			return
+		}
+		s = uc.Shape
+		if s == nil {
+			err = app.Error("no shape context")
+			return
+		}
+	} else {
+		if f == nil {
+			err = app.Error("no frame")
+			return
+		}
+		if len(f.Shapes) == 0 {
+			err = app.Error("no shapes exist in frame %s", f.Name)
+			return
+		}
+		s = f.FindShape(name)
+		if s == nil {
+			err = app.Error("shape %s does not exist in frame %s", name, f.Name)
+			return
+		}
+	}
+	if len(loads) > 0 {
+		if err = s.Load(loads...); err != nil {
+			return
+		}
 	}
 	return
 }
@@ -47,9 +96,10 @@ func ShapeNew(f *Frame, name string) (s *Shape) {
 
 func (s *Shape) Inspect() (si *ShapeInspector) {
 	si = &ShapeInspector{
-		Name:   s.Name,
-		About:  s.About,
-		Shaper: s.ShaperName,
+		Name:          s.Name,
+		About:         s.About,
+		Shaper:        s.ShaperName,
+		Configuration: s.Configuration.SettingsDetail(),
 	}
 	return
 }
@@ -57,56 +107,46 @@ func (s *Shape) Inspect() (si *ShapeInspector) {
 // Data
 
 func (s *Shape) IsExists() (is bool) {
-	if s.Frame.ShapeFind(s.Name) != nil {
+	if s.Frame.FindShape(s.Name) != nil {
 		is = true
 		return
 	}
 	return
 }
 
-func (s *Shape) Load(preloads ...string) (err error) {
-	queries.Load(s, s.ID, preloads...)
+func (s *Shape) Load(loads ...string) (err error) {
+	sl := NewShapeLoader(s, loads)
+	err = sl.load()
 	return
 }
 
 func (s *Shape) Assign(params map[string]any) {
-	if params["ShaperName"] != nil {
-		s.ShaperName = utils.StringTidy(params["ShaperName"].(string))
+	if params["Name"] != nil {
+		s.Name = params["Name"].(string)
 	}
 	if params["About"] != nil {
-		s.About = utils.StringTidy(params["About"].(string))
+		s.About = params["About"].(string)
 	}
-	if params["Config"] != nil {
-		s.ConfigJson = datatypes.JSON(utils.JsonMarshal(params["Config"]))
+	if params["Configuration"] != nil {
+		s.ConfigurationJson = datatypes.JSON(utils.JsonMarshal(params["Configuration"]))
 	}
 }
 
-func (s *Shape) Create() (err error) {
+func (s *Shape) Label() {
 	if s.Name == "" {
 		s.Name = s.Shaper.Name
 	}
 	if s.About == "" {
 		s.About = s.Shaper.About
 	}
-	if s.IsExists() {
-		err = app.Error(nil, "shape %s already exists in frame %s", s.Name, s.Frame.Name)
-		return
-	}
+}
+
+func (s *Shape) Create() {
 	queries.Create(s)
-	return
 }
 
-func (s *Shape) Save() (err error) {
+func (s *Shape) Save() {
 	queries.Update(s)
-	return
-}
-
-func (s *Shape) SaveConfiguration() (err error) {
-	if err = s.ConfigurationValidate(); err != nil {
-		return
-	}
-	queries.Update(s)
-	return
 }
 
 func (s *Shape) Destroy() {
@@ -115,38 +155,11 @@ func (s *Shape) Destroy() {
 
 // Configuration
 
-func (s *Shape) ConfigValues() (config map[string]any) {
-	j := s.ConfigJson.String()
+func (s *Shape) ConfigurationSettings() (settings map[string]any) {
+	j := s.ConfigurationJson.String()
 	if j != "" {
-		utils.JsonUnmarshal([]byte(string(s.ConfigJson)), &config)
+		settings = map[string]any{}
+		utils.JsonUnmarshal([]byte(string(s.ConfigurationJson)), &settings)
 	}
-	return
-}
-
-func (s *Shape) ConfigurationValidate() (err error) {
-	err = s.Shaper.ConfigurationValidate(s.Name, s.ConfigValues())
-	return
-}
-
-// Associations
-
-func (s *Shape) SetShaper() (err error) {
-	var sr *Shaper
-	if sr, err = s.ShaperFind(); err != nil {
-		return
-	} else if sr == nil {
-		err = app.Error(nil, "locate shaper %s: no such shaper in workspace %s", s.ShaperName, s.Frame.Workspace.Name)
-		return
-	} else {
-		sr.Load()
-		s.Shaper = sr
-	}
-	return
-}
-
-func (s *Shape) ShaperFind() (sr *Shaper, err error) {
-	f := s.Frame
-	w := f.Workspace
-	sr, err = w.ShaperFind(s.ShaperName)
 	return
 }

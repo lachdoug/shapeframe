@@ -1,11 +1,9 @@
-{{ with index . "Result" -}}
-WORKSPACE
+{{ define "workspaces/update" -}}
+{{ with .Result -}}
+Successfully updated workspace
 From:
-{{ with index . "From" }}  Name: {{ index . "Name" }}
-  About: {{ index . "About" }}
-{{ end -}}
+{{ include "labels/label" (.From) 2 }}
 To:
-{{ with index . "To" }}  Name: {{ index . "Name" }}
-  About: {{ index . "About" }}
+{{ include "labels/label" (.To) 2 }}
 {{ end -}}
 {{ end -}}

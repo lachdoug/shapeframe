@@ -3,70 +3,86 @@ package controllers
 import (
 	"sf/app"
 	"sf/models"
-	"sf/utils"
 )
 
 type ShapesUpdateParams struct {
 	Workspace string
 	Frame     string
 	Shape     string
-	Name      string
-	About     string
+	Update    map[string]any
 }
 
 type ShapesUpdateResult struct {
-	From *ShapesUpdateResultDetails
-	To   *ShapesUpdateResultDetails
+	Workspace string
+	Frame     string
+	Shape     string
+	From      *ShapesUpdateResultDetails
+	To        *ShapesUpdateResultDetails
 }
 
 type ShapesUpdateResultDetails struct {
-	Name  string
-	About string
+	Name          string
+	About         string
+	Configuration []map[string]any
 }
 
-func ShapesUpdate(jparams []byte) (jbody []byte, validation *app.Validation, err error) {
-	params := &ShapesUpdateParams{}
-	utils.JsonUnmarshal(jparams, params)
+func ShapesUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+	var w *models.Workspace
+	var f *models.Frame
+	var s *models.Shape
+	params := paramsFor[ShapesUpdateParams](jparams)
 
-	uc := models.UserContextNew()
-	uc.Load("Workspaces")
-	w := uc.WorkspaceFind(params.Workspace)
-	if w == nil {
-		err = app.Error(nil, "workspace %s does not exist", params.Workspace)
+	vn = &app.Validation{}
+	if params.Workspace == "" {
+		vn.Add("Workspace", "must not be blank")
+	}
+	if params.Frame == "" {
+		vn.Add("Frame", "must not be blank")
+	}
+	if params.Shape == "" {
+		vn.Add("Shape", "must not be blank")
+	}
+	if vn.IsInvalid() {
 		return
 	}
-	f := w.FrameFind(params.Frame)
-	if f == nil {
-		err = app.Error(nil, "frame %s does not exist", params.Frame)
+
+	uc := models.ResolveUserContext(
+		"Workspaces.Frames.Shapes",
+	)
+	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
 		return
 	}
-	s := f.ShapeFind(params.Shape)
-	if s == nil {
-		err = app.Error(nil, "shape %s does not exist", params.Shape)
+	if f, err = models.ResolveFrame(uc, w, params.Frame); err != nil {
+		return
+	}
+	if s, err = models.ResolveShape(uc, f, params.Shape, "Configuration"); err != nil {
 		return
 	}
 
 	result := &ShapesUpdateResult{
+		Workspace: w.Name,
+		Frame:     f.Name,
+		Shape:     s.Name,
 		From: &ShapesUpdateResultDetails{
-			Name:  s.Name,
-			About: s.About,
+			Name:          s.Name,
+			About:         s.About,
+			Configuration: s.Configuration.SettingsDetail(),
 		},
 	}
 
-	s.Assign(map[string]any{
-		"Name":  params.Name,
-		"About": params.About,
-	})
-	if err = s.Save(); err != nil {
+	s.Assign(params.Update)
+	s.Save()
+
+	if err = s.Load("Configuration"); err != nil {
 		return
 	}
 
 	result.To = &ShapesUpdateResultDetails{
-		Name:  s.Name,
-		About: s.About,
+		Name:          s.Name,
+		About:         s.About,
+		Configuration: s.Configuration.SettingsDetail(),
 	}
 
-	body := &app.Body{Result: result}
-	jbody = utils.JsonMarshal(body)
+	jbody = jbodyFor(result)
 	return
 }

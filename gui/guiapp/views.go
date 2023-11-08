@@ -3,7 +3,6 @@ package guiapp
 import (
 	"bytes"
 	"html/template"
-	"log"
 	"path/filepath"
 	"sf/app"
 	"strings"
@@ -21,13 +20,13 @@ func templater(r string, n string) (view func(map[string]any) (string, error)) {
 
 		tpl, err := app.Views.ReadFile(tp)
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 
 		var bb bytes.Buffer
 		ht := template.Must(template.New(n).Parse(string(tpl)))
 		if err = ht.Execute(&bb, body); err != nil {
-			log.Fatal(err)
+			panic(err)
 		}
 		return
 	}

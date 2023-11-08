@@ -16,6 +16,7 @@ func GitRepoDirs(dirPath string) (gitRepoDirs []string) {
 		}
 		return nil
 	}
-	filepath.WalkDir(dirPath, walker)
+	err := filepath.WalkDir(dirPath, walker)
+	checkErr(err)
 	return
 }

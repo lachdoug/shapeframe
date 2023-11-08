@@ -6,13 +6,13 @@ import (
 )
 
 func StreamAppend(dirPath string, p []byte) {
-	var f *os.File
-	var err error
-
 	filePath := filepath.Join(dirPath, "out")
-	f, err = os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	checkErr(err)
-	defer f.Close()
+	defer func() {
+		err = f.Close()
+		checkErr(err)
+	}()
 
 	_, err = f.WriteString(string(p))
 	checkErr(err)

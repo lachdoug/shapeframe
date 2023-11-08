@@ -1,10 +1,8 @@
 package controllers
 
 import (
-	"fmt"
 	"sf/app"
 	"sf/models"
-	"sf/utils"
 )
 
 type WorkspacesCreateParams struct {
@@ -13,35 +11,30 @@ type WorkspacesCreateParams struct {
 }
 
 type WorkspacesCreateResult struct {
-	Name string
+	Workspace string
 }
 
-func WorkspacesCreate(jparams []byte) (jbody []byte, v *app.Validation, err error) {
-	params := &WorkspacesCreateParams{}
-	utils.JsonUnmarshal(jparams, params)
+func WorkspacesCreate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+	var w *models.Workspace
+	params := paramsFor[WorkspacesCreateParams](jparams)
 
-	name := utils.StringTidy(params.Name)
-
-	v = &app.Validation{}
-	if name == "" {
-		v.Add("Name", "must not be blank")
+	vn = &app.Validation{}
+	if params.Name == "" {
+		vn.Add("Name", "must not be blank")
 	}
-	if v.IsInvalid() {
+	if vn.IsInvalid() {
 		return
 	}
 
-	uc := models.UserContextNew()
-	fmt.Println("User Context", uc)
-	w := models.WorkspaceNew(uc, name)
-	w.Assign(map[string]any{
-		"About": params.About,
-	})
-	if err = w.Create(); err != nil {
+	uc := models.ResolveUserContext("Workspaces")
+	if w, err = models.CreateWorkspace(uc, params.Name, params.About); err != nil {
 		return
 	}
 
-	result := &WorkspacesCreateResult{Name: w.Name}
-	body := &app.Body{Result: result}
-	jbody = utils.JsonMarshal(body)
+	result := &WorkspacesCreateResult{
+		Workspace: w.Name,
+	}
+
+	jbody = jbodyFor(result)
 	return
 }

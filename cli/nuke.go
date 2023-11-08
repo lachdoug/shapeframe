@@ -12,8 +12,14 @@ func nuke() (command any) {
 	command = &cliapp.Command{
 		Name:    "nuke",
 		Summary: "Reset shapeframe environment (data will be lost)",
+		Usage: ss(
+			"sf nuke [options]",
+			"Confirm nuke by setting the -confirm flag",
+			"  Otherwise propmt for confirmation",
+		),
+
 		Flags: ss(
-			"bool", "confirm", "Do not propmt for confirmation",
+			"bool", "confirm", "Confirm nuke",
 		),
 		Parametizer: nukeParams,
 		Controller:  controllers.NukesCreate,
@@ -22,16 +28,20 @@ func nuke() (command any) {
 	return
 }
 
-func nukeParams(context *cliapp.Context) (jparams []byte, validation *app.Validation, err error) {
+func nukeParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
 	if !context.BoolFlag("confirm") {
-		nukePrompt()
+		err = nukePrompt()
 	}
 	return
 }
 
-func nukePrompt() {
-	s := prompt("Are you sure that you want to destroy existing data? (Y/n)")
+func nukePrompt() (err error) {
+	s, err := prompt("Are you sure that you want to destroy existing data? (Y/n)")
+	if err != nil {
+		return
+	}
 	if answer := strings.TrimSpace(s); answer != "Y" {
 		os.Exit(0)
 	}
+	return
 }

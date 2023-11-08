@@ -11,6 +11,7 @@ func GitRepoBranch(dirPath string) (branch string, err error) {
 	var g *git.Repository
 	var gr *plumbing.Reference
 	if g, err = git.PlainOpen(dirPath); err != nil {
+		panic("WTF")
 		err = fmt.Errorf("git repo directory %s: %s", dirPath, err)
 		return
 	}

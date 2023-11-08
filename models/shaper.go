@@ -11,7 +11,8 @@ type Shaper struct {
 	Path      string
 	Name      string
 	About     string
-	Config    map[any]any
+	Config    []map[string]any
+	Connect   []*ShaperConnect
 }
 
 type ShaperInspector struct {
@@ -22,10 +23,7 @@ type ShaperInspector struct {
 
 // Construction
 
-func ShaperNew(w *Workspace, path string, name string) (sr *Shaper) {
-	if w == nil {
-		panic("Shaper Workspace is <nil>")
-	}
+func NewShaper(w *Workspace, path string, name string) (sr *Shaper) {
 	sr = &Shaper{
 		Workspace: w,
 		Path:      path,
@@ -36,10 +34,11 @@ func ShaperNew(w *Workspace, path string, name string) (sr *Shaper) {
 
 // Inspection
 
-func (sr *Shaper) Inspect() (sri *ShaperInspector, err error) {
+func (sr *Shaper) Inspect() (sri *ShaperInspector) {
+	var err error
 	var uri string
 	if uri, err = sr.URI(); err != nil {
-		return
+		uri = ""
 	}
 	sri = &ShaperInspector{
 		URI:   uri,
@@ -67,13 +66,14 @@ func (sr *Shaper) directory() (dirPath string) {
 
 func (sr *Shaper) Load() (err error) {
 	if err = utils.YamlReadFile(sr.directory(), "shaper", sr); err != nil {
-		err = app.Error(err, "load shaper %s in %s", sr.Name, sr.Path)
+		err = app.ErrorWith(err, "load shaper %s in %s", sr.Name, sr.Path)
 	}
 	return
 }
 
-func (sr *Shaper) ConfigurationValidate(name string, values map[string]any) (err error) {
-	c := NewConfiguration("shape", name, sr.Config, values)
-	err = c.Validate()
+// Configuration
+
+func (sr *Shaper) ConfigurationFormSchema() (schema *FormSchema) {
+	schema = NewFormSchema("shaper", sr.Name, sr.Config)
 	return
 }

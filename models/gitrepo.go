@@ -16,6 +16,8 @@ type GitRepo struct {
 	URI       string
 	URL       string
 	Branch    string
+	Shapers   []*Shaper
+	Framers   []*Framer
 }
 
 type GitRepoInspector struct {
@@ -28,62 +30,40 @@ type GitRepoInspector struct {
 
 // Construct
 
-func GitRepoNew(w *Workspace, path string) (g *GitRepo) {
-	if w == nil {
-		panic("GitRepo Workspace is <nil>")
+func NewGitRepo(w *Workspace, path string) (g *GitRepo) {
+	g = &GitRepo{
+		Workspace: w,
+		Path:      path,
 	}
-	g = &GitRepo{Workspace: w, Path: path}
 	return
 }
 
 // Inspection
 
-func (g *GitRepo) Inspect() (gri *GitRepoInspector, err error) {
-	var sris []*ShaperInspector
-	var fris []*FramerInspector
-	if sris, err = g.ShapersInspect(); err != nil {
-		return
-	}
-	if fris, err = g.FramersInspect(); err != nil {
-		return
-	}
+func (g *GitRepo) Inspect() (gri *GitRepoInspector) {
 	gri = &GitRepoInspector{
 		URI:     g.URI,
 		URL:     g.URL,
 		Branch:  g.Branch,
-		Shapers: sris,
-		Framers: fris,
+		Shapers: g.ShapersInspect(),
+		Framers: g.FramersInspect(),
 	}
 	return
 }
 
-func (g *GitRepo) ShapersInspect() (sris []*ShaperInspector, err error) {
-	var srs []*Shaper
+func (g *GitRepo) ShapersInspect() (sris []*ShaperInspector) {
 	sris = []*ShaperInspector{}
-	var sri *ShaperInspector
-	if srs, err = g.Shapers(); err != nil {
-		return
-	}
-	for _, sr := range srs {
-		if sri, err = sr.Inspect(); err != nil {
-			return
-		}
+	for _, sr := range g.Shapers {
+		sri := sr.Inspect()
 		sris = append(sris, sri)
 	}
 	return
 }
 
-func (g *GitRepo) FramersInspect() (fris []*FramerInspector, err error) {
-	var frs []*Framer
+func (g *GitRepo) FramersInspect() (fris []*FramerInspector) {
 	fris = []*FramerInspector{}
-	var fri *FramerInspector
-	if frs, err = g.Framers(); err != nil {
-		return
-	}
-	for _, fr := range frs {
-		if fri, err = fr.Inspect(); err != nil {
-			return
-		}
+	for _, fr := range g.Framers {
+		fri := fr.Inspect()
 		fris = append(fris, fri)
 	}
 	return
@@ -110,120 +90,52 @@ func (g *GitRepo) isExists() (is bool) {
 	return
 }
 
-func (g *GitRepo) load() (err error) {
-	var uri, url, branch string
-	if uri, err = utils.GitRepoURI(g.Path); err != nil {
-		return
-	}
-	if url, err = utils.GitRepoURL(g.Path); err != nil {
-		return
-	}
-	if branch, err = utils.GitRepoBranch(g.Path); err != nil {
-		return
-	}
-	g.URI = uri
-	g.URL = url
-	g.Branch = branch
+func (g *GitRepo) Load(loads ...string) (err error) {
+	gl := NewGitRepoLoader(g, loads)
+	err = gl.load()
 	return
 }
 
-func (g *GitRepo) remove() (err error) {
+func (g *GitRepo) remove() {
 	utils.RemoveDir(g.Path)
-	return
 }
 
-func (g *GitRepo) clone(s *Stream, uri string, ssh bool) {
+func (g *GitRepo) clone(uri string, ssh bool, st *Stream) {
 	var err error
 	d := g.Path
 	utils.MakeDir(d)
-	o := &git.CloneOptions{URL: g.OriginURL(uri, ssh), Depth: 1, Progress: s}
+	o := &git.CloneOptions{
+		URL:      g.OriginURL(uri, ssh),
+		Depth:    1,
+		Progress: st,
+	}
 	if _, err = git.PlainClone(d, false, o); err != nil {
-		s.Error(err)
+		st.Error(err)
 		g.remove()
 	}
-	s.Close()
+	st.Close()
 }
 
-func (g *GitRepo) pull(s *Stream) {
+func (g *GitRepo) pull(st *Stream) {
 	var gr *git.Repository
 	var gw *git.Worktree
 	var err error
 	d := g.Path
-	o := &git.PullOptions{RemoteName: "origin", Depth: 1, Progress: s}
+	o := &git.PullOptions{
+		RemoteName: "origin",
+		Depth:      1,
+		Progress:   st,
+	}
 	if gr, err = git.PlainOpen(d); err != nil {
-		s.Error(err)
+		st.Error(err)
 	} else if gw, err = gr.Worktree(); err != nil {
-		s.Error(err)
+		st.Error(err)
 	} else if err = gw.Pull(o); err != nil {
 		if err == git.NoErrAlreadyUpToDate {
-			s.Write([]byte("Already up to date\n"))
+			st.Writef("Already up to date\n")
 		} else {
-			s.Error(err)
+			st.Error(err)
 		}
 	}
-	s.Close()
-}
-
-// Associations
-
-func (g *GitRepo) Framers() (frs []*Framer, err error) {
-	var fr *Framer
-	for _, n := range g.FramerNames() {
-		if fr, err = g.Framer(n); err != nil {
-			return
-		}
-		frs = append(frs, fr)
-	}
-	return
-}
-
-func (g *GitRepo) Shapers() (srs []*Shaper, err error) {
-	var sr *Shaper
-	for _, n := range g.ShaperNames() {
-		if sr, err = g.Shaper(n); err != nil {
-			return
-		}
-		srs = append(srs, sr)
-	}
-	return
-}
-
-func (g *GitRepo) FramerNames() (ns []string) {
-	dirs := utils.SubDirs(filepath.Join(g.Path, "framers"))
-	for _, dir := range dirs {
-		if utils.IsFile(filepath.Join(g.Path, "framers", dir, "framer.yaml")) {
-			ns = append(ns, dir)
-		}
-	}
-	return
-}
-
-func (g *GitRepo) ShaperNames() (ns []string) {
-	dirs := utils.SubDirs(filepath.Join(g.Path, "shapers"))
-	for _, dir := range dirs {
-		if utils.IsFile(filepath.Join(g.Path, "shapers", dir, "shaper.yaml")) {
-			ns = append(ns, dir)
-		}
-	}
-	return
-}
-
-func (g *GitRepo) Framer(name string) (fr *Framer, err error) {
-	fr = FramerNew(
-		g.Workspace,
-		g.Path,
-		name,
-	)
-	err = fr.Load()
-	return
-}
-
-func (g *GitRepo) Shaper(name string) (sr *Shaper, err error) {
-	sr = ShaperNew(
-		g.Workspace,
-		g.Path,
-		name,
-	)
-	err = sr.Load()
-	return
+	st.Close()
 }

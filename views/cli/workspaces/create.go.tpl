@@ -1,3 +1,5 @@
-{{ with index . "Result" -}}
-Created workspace {{ index . "Name" }}
+{{ define "workspaces/create" -}}
+{{ with .Result -}}
+Successfully added workspace {{ .Workspace }}
+{{ end -}}
 {{ end -}}

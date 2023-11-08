@@ -5,9 +5,12 @@ import "sf/cli/cliapp"
 func add() (commandset any) {
 	commandset = &cliapp.CommandSet{
 		Name:    "add",
-		Summary: "Add a repository or directory to workspace",
+		Summary: "Add a shape, frame, workspace, repository or directory",
 		Aliases: ss("a"),
 		Commands: cs(
+			addShape,
+			addFrame,
+			addWorkspace,
 			addRepository,
 			addDirectory,
 		),

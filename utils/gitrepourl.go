@@ -16,6 +16,7 @@ func GitRepoURL(dirPath string) (url string, err error) {
 		return
 	} else if gr, err = g.Remote("origin"); err != nil {
 		url = ""
+		return
 	}
 	grc = gr.Config()
 	url = grc.URLs[0]

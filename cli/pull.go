@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
@@ -13,26 +12,37 @@ import (
 
 func pull() (command any) {
 	command = &cliapp.Command{
-		Name:        "pull",
-		Summary:     "Pull a workspace repository",
+		Name:    "pull",
+		Summary: "Pull a workspace repository",
+		Aliases: ss("p"),
+		Usage: ss(
+			"sf pull [options] [URI]",
+			"A repository URI may be provided as an argument",
+			"  Otherwise prompt for URI",
+			"Provide an optional workspace name using the -workspace flag",
+			"  Uses workspace context when not provided",
+		),
+		Flags: ss(
+			"string", "workspace", "Workspace name",
+		),
 		Parametizer: pullParams,
-		Controller:  controllers.RepositoryPullsUpdate,
+		Controller:  controllers.RepositoryPullsCreate,
 		Viewer:      pullViewer,
 	}
 	return
 }
 
-func pullParams(context *cliapp.Context) (jparams []byte, validation *app.Validation, err error) {
-	uc := models.UserContextNew()
-	uc.Load("Workspace")
-	w := uc.Workspace
-	if w == nil {
-		err = app.Error(nil, "no workspace context")
+func pullParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+	var w *models.Workspace
+	workspace := context.StringFlag("workspace")
+	uri := context.Argument(0)
+
+	uc := models.ResolveUserContext("Workspace")
+	if w, err = models.ResolveWorkspace(uc, workspace, "Repositories"); err != nil {
 		return
 	}
 
-	uri := context.Argument(0)
-	if len(uri) == 0 {
+	if uri == "" {
 		if uri, err = pullPrompt(w); err != nil {
 			return
 		}
@@ -46,34 +56,38 @@ func pullParams(context *cliapp.Context) (jparams []byte, validation *app.Valida
 }
 
 func pullPrompt(w *models.Workspace) (uri string, err error) {
-	rs := w.RepositoriesWithGitRepos()
+	rs := w.Repositories
 	if len(rs) == 0 {
-		app.Error(nil, "no repositories in workspace")
+		err = app.Error("no repositories in workspace")
 		return
 	}
-	q := ""
+	list := ""
 	uris := []string{}
 	for i, r := range rs {
 		uris = append(uris, r.GitRepo.URI)
-		q = q + fmt.Sprintf("%d. %s\n", i+1, r.GitRepo.URI)
+		list = list + fmt.Sprintf("%d. %s\n", i+1, r.GitRepo.URI)
 	}
-	s := prompt(q + "Which repository? ")
+	app.Printf(list)
+	s, err := prompt("Which repository?")
+	if err != nil {
+		return
+	}
 	i, err := strconv.Atoi(strings.TrimSpace(s))
 	if err == nil && i <= len(rs) {
 		uri = uris[i-1]
 	} else {
-		fmt.Printf("Invalid: %s", s)
-		os.Exit(1)
+		err = app.Error("invalid: %s", s)
+		return
 	}
 	return
 }
 
 func pullViewer(body map[string]any) (output string, err error) {
 	r := resultItem(body)
-	fmt.Printf("Pull %s\n", r["GitURL"])
+	app.Printf("Pull %s\n", r["URL"])
 	if err = stream(body); err != nil {
 		return
 	}
-	output = fmt.Sprintf("Updated %s in workspace %s\n", r["URI"], r["Workspace"])
+	output, err = cliapp.View("repositorypulls/create")(body)
 	return
 }

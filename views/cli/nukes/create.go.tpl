@@ -1,1 +1,4 @@
-Shapeframe data has been destroyed
+{{ define "nukes/create" -}}
+Successfully nuked Shapeframe data
+{{ end -}}
+

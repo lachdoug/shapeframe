@@ -15,13 +15,16 @@ type Workspace struct {
 	ID            uint `gorm:"primaryKey"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
-	DeletedAt     soft_delete.DeletedAt `gorm:"index:idx_nondeleted_usercontext_workspace,unique"`
+	DeletedAt     soft_delete.DeletedAt `gorm:"softDelete:nano;index:idx_nondeleted_usercontext_workspace,unique"`
 	UserContext   *UserContext          `gorm:"foreignkey:UserContextID"`
 	UserContextID uint                  `gorm:"index:idx_nondeleted_usercontext_workspace,unique"`
 	Name          string                `gorm:"index:idx_nondeleted_usercontext_workspace,unique"`
 	About         string
 	Frames        []*Frame
 	Directories   []*Directory
+	Repositories  []*Repository `gorm:"-"`
+	Framers       []*Framer     `gorm:"-"`
+	Shapers       []*Shaper     `gorm:"-"`
 }
 
 type WorkspaceInspector struct {
@@ -34,29 +37,65 @@ type WorkspaceInspector struct {
 
 // Construction
 
-func WorkspaceNew(uc *UserContext, name string) (w *Workspace) {
-	if uc == nil {
-		panic("Workspace UserContext is <nil>")
+func NewWorkspace(uc *UserContext, name string) (w *Workspace) {
+	w = &Workspace{
+		UserContext: uc,
+		Name:        name,
 	}
-	w = &Workspace{UserContext: uc, Name: name}
+	return
+}
+
+func CreateWorkspace(uc *UserContext, name string, about string) (w *Workspace, err error) {
+	w = NewWorkspace(uc, name)
+	w.About = about
+	if w.IsExists() {
+		err = app.Error("workspace %s already exists", w.Name)
+		return
+	}
+	w.Create()
+	return
+}
+
+func ResolveWorkspace(uc *UserContext, name string, loads ...string) (w *Workspace, err error) {
+	if uc == nil {
+		err = app.Error("no user context")
+		return
+	}
+	if name == "" {
+		w = uc.Workspace
+		if w == nil {
+			err = app.Error("no workspace context")
+			return
+		}
+	} else {
+		if len(uc.Workspaces) == 0 {
+			err = app.Error("no workspaces exist")
+			return
+		}
+		w = uc.FindWorkspace(name)
+		if w == nil {
+			err = app.Error("workspace %s does not exist", name)
+			return
+		}
+	}
+	if len(loads) > 0 {
+		if err = w.Load(loads...); err != nil {
+			return
+		}
+	}
 	return
 }
 
 // Inspection
 
-func (w *Workspace) Inspect() (wi *WorkspaceInspector, err error) {
-	var ris []*RepositoryInspector
-	var dis []*DirectoryInspector
-	if ris, err = w.RepositoriesInspect(); err != nil {
-		return
-	}
-	if dis, err = w.DirectoriesInspect(); err != nil {
-		return
-	}
+func (w *Workspace) Inspect() (wi *WorkspaceInspector) {
+	ris := w.RepositoriesInspect()
+	dis := w.DirectoriesInspect()
+	fis := w.FramesInspect()
 	wi = &WorkspaceInspector{
 		Name:         w.Name,
 		About:        w.About,
-		Frames:       w.FramesInspect(),
+		Frames:       fis,
 		Repositories: ris,
 		Directories:  dis,
 	}
@@ -66,30 +105,25 @@ func (w *Workspace) Inspect() (wi *WorkspaceInspector, err error) {
 func (w *Workspace) FramesInspect() (fis []*FrameInspector) {
 	fis = []*FrameInspector{}
 	for _, f := range w.Frames {
-		fis = append(fis, f.Inspect())
+		fi := f.Inspect()
+		fis = append(fis, fi)
 	}
 	return
 }
 
-func (w *Workspace) RepositoriesInspect() (ris []*RepositoryInspector, err error) {
+func (w *Workspace) RepositoriesInspect() (ris []*RepositoryInspector) {
 	ris = []*RepositoryInspector{}
-	for _, r := range w.RepositoriesWithGitRepos() {
-		var ri *RepositoryInspector
-		if ri, err = r.Inspect(); err != nil {
-			return
-		}
+	for _, r := range w.Repositories {
+		ri := r.Inspect()
 		ris = append(ris, ri)
 	}
 	return
 }
 
-func (w *Workspace) DirectoriesInspect() (dis []*DirectoryInspector, err error) {
+func (w *Workspace) DirectoriesInspect() (dis []*DirectoryInspector) {
 	dis = []*DirectoryInspector{}
-	for _, d := range w.DirectoriesWithGitRepos() {
-		var di *DirectoryInspector
-		if di, err = d.Inspect(); err != nil {
-			return
-		}
+	for _, d := range w.Directories {
+		di := d.Inspect()
 		dis = append(dis, di)
 	}
 	return
@@ -98,7 +132,7 @@ func (w *Workspace) DirectoriesInspect() (dis []*DirectoryInspector, err error) 
 // Data
 
 func (w *Workspace) IsExists() (is bool) {
-	if w.UserContext.WorkspaceFind(w.Name) != nil {
+	if w.UserContext.FindWorkspace(w.Name) != nil {
 		is = true
 		return
 	}
@@ -110,32 +144,27 @@ func (w *Workspace) directory() (dirPath string) {
 	return
 }
 
-func (w *Workspace) Load(preloads ...string) (err error) {
-	queries.Load(w, w.ID, preloads...)
+func (w *Workspace) Load(loads ...string) (err error) {
+	wl := NewWorkspaceLoader(w, loads)
+	err = wl.load()
 	return
 }
 
 func (w *Workspace) Assign(params map[string]any) {
 	if params["Name"] != nil {
-		w.Name = utils.StringTidy(params["Name"].(string))
+		w.Name = params["Name"].(string)
 	}
 	if params["About"] != nil {
-		w.About = utils.StringTidy(params["About"].(string))
+		w.About = params["About"].(string)
 	}
 }
 
-func (w *Workspace) Create() (err error) {
-	if w.IsExists() {
-		err = app.Error(nil, "workspace %s already exists", w.Name)
-		return
-	}
+func (w *Workspace) Create() {
 	queries.Create(w)
-	return
 }
 
-func (w *Workspace) Save() (err error) {
+func (w *Workspace) Save() {
 	queries.Update(w)
-	return
 }
 
 func (w *Workspace) Destroy() {
@@ -143,10 +172,6 @@ func (w *Workspace) Destroy() {
 }
 
 // Associations
-
-func (w *Workspace) Lookup(assocName string, key string, value string, model any) {
-	queries.Lookup(w, assocName, key, value, model)
-}
 
 func (w *Workspace) GitRepoDirectoryFor(uri string) (dirPath string) {
 	elem := []string{}
@@ -156,128 +181,52 @@ func (w *Workspace) GitRepoDirectoryFor(uri string) (dirPath string) {
 	return
 }
 
-func (w *Workspace) RepositoriesWithGitRepos() (rs []*Repository) {
-	for _, dp := range w.RepositoryDirs() {
-		r := RepositoryNew(w, dp)
-		r.Load()
-		rs = append(rs, r)
-	}
-	return
-}
-
-func (w *Workspace) RepositoryDirs() (dps []string) {
-	dps = utils.GitRepoDirs(filepath.Join(w.directory(), "repos"))
-	return
-}
-
-func (w *Workspace) DirectoriesWithGitRepos() (ds []*Directory) {
-	for _, d := range w.Directories {
-		d = DirectoryNew(w, d.Path)
-		d.Load()
-		ds = append(ds, d)
-	}
-	return
-}
-
-func (w *Workspace) Shapes() (ss []*Shape) {
-	ss = []*Shape{}
-	for _, f := range w.Frames {
-		ss = append(ss, f.Shapes...)
-	}
-	return
-}
-
-func (w *Workspace) Framers() (frs []*Framer, err error) {
-	frs = []*Framer{}
-	var dfrs []*Framer
-	var rfrs []*Framer
-	for _, d := range w.DirectoriesWithGitRepos() {
-		if dfrs, err = d.Framers(); err != nil {
+func (w *Workspace) FindDirectory(path string) (d *Directory) {
+	for _, d = range w.Directories {
+		if d.Path == path {
 			return
 		}
-		frs = append(frs, dfrs...)
 	}
-	for _, r := range w.RepositoriesWithGitRepos() {
-		if rfrs, err = r.Framers(); err != nil {
+	d = nil
+	return
+}
+
+func (w *Workspace) FindRepository(path string) (r *Repository) {
+	for _, r = range w.Repositories {
+		if r.Path == path {
 			return
 		}
-		frs = append(frs, rfrs...)
 	}
+	r = nil
 	return
 }
 
-func (w *Workspace) Shapers() (srs []*Shaper, err error) {
-	srs = []*Shaper{}
-	var dsrs []*Shaper
-	var rsrs []*Shaper
-	for _, d := range w.DirectoriesWithGitRepos() {
-		if dsrs, err = d.Shapers(); err != nil {
+func (w *Workspace) FindFrame(name string) (f *Frame) {
+	for _, f = range w.Frames {
+		if f.Name == name {
 			return
 		}
-		srs = append(srs, dsrs...)
 	}
-	for _, r := range w.RepositoriesWithGitRepos() {
-		if rsrs, err = r.Shapers(); err != nil {
-			return
-		}
-		srs = append(srs, rsrs...)
-	}
+	f = nil
 	return
 }
 
-func (w *Workspace) DirectoryFind(path string) (d *Directory) {
-	d = &Directory{}
-	w.Lookup("Directories", "path", path, d)
-	if d.ID == uint(0) {
-		d = nil
-	}
-	return
-}
-
-func (w *Workspace) RepositoryFind(path string) (r *Repository) {
-	r = RepositoryNew(w, path)
-	// r.Load()
-	if !r.IsExists() {
-		r = nil
-	}
-	return
-}
-
-func (w *Workspace) FrameFind(name string) (f *Frame) {
-	f = &Frame{}
-	w.Lookup("Frames", "name", name, f)
-	if f.ID == uint(0) {
-		f = nil
-	}
-	return
-}
-
-func (w *Workspace) FramerFind(name string) (fr *Framer, err error) {
-	var frs []*Framer
-	if frs, err = w.Framers(); err != nil {
-		return
-	}
-	for _, fr = range frs {
+func (w *Workspace) FindFramer(name string) (fr *Framer) {
+	for _, fr = range w.Framers {
 		if fr.Name == name {
-			break
-		} else {
-			fr = nil
+			return
 		}
 	}
+	fr = nil
 	return
 }
 
-func (w *Workspace) ShaperFind(name string) (sr *Shaper, err error) {
-	var srs []*Shaper
-	if srs, err = w.Shapers(); err != nil {
-		return
-	}
-	for _, sr = range srs {
+func (w *Workspace) FindShaper(name string) (sr *Shaper) {
+	for _, sr = range w.Shapers {
 		if sr.Name == name {
-			break
-		} else {
-			sr = nil
+			return
 		}
 	}
+	sr = nil
 	return
 }

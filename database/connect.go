@@ -15,11 +15,10 @@ var DB *gorm.DB
 
 func Connect() {
 	var err error
-	DB, err = gorm.Open(sqlite.Open(dbFilePath()), &gorm.Config{
+	if DB, err = gorm.Open(sqlite.Open(dbFilePath()), &gorm.Config{
 		Logger: fileLogger(),
-	})
-	if err != nil {
-		log.Fatal("connect to database: no connection")
+	}); err != nil {
+		panic(err)
 	}
 }
 
@@ -33,7 +32,7 @@ func fileLogger() (fLog logger.Interface) {
 	utils.MakeFile(filePath)
 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	fLog = logger.New(log.New(file, "\r\n", log.LstdFlags), logger.Config{
 		LogLevel:             logger.Warn,

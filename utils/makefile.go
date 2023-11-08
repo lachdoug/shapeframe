@@ -15,4 +15,5 @@ func MakeFile(elem ...string) {
 	checkErr(err)
 	err = f.Close()
 	checkErr(err)
+	return
 }

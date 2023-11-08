@@ -3,11 +3,10 @@ package controllers
 import (
 	"sf/app"
 	"sf/models"
-	"sf/utils"
 )
 
 type ShapersIndexParams struct {
-	Workspace bool // Limit list to workspace context
+	Workspace string // Limit list to workspace
 }
 
 type ShapersIndexItemResult struct {
@@ -16,29 +15,30 @@ type ShapersIndexItemResult struct {
 	About     string
 }
 
-func ShapersIndex(jparams []byte) (jbody []byte, v *app.Validation, err error) {
+func ShapersIndex(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
 	var srs []*models.Shaper
+	params := paramsFor[ShapersIndexParams](jparams)
 
-	params := &ShapersIndexParams{}
-	utils.JsonUnmarshal(jparams, params)
-
-	uc := models.UserContextNew()
-	uc.Load("Workspaces")
-	if params.Workspace {
-		uc.Load("Workspace.Directories.Workspace")
-		if uc.Workspace == nil {
-			err = app.Error(nil, "no workspace context")
-			return
-		}
-		w := uc.Workspace
-		if srs, err = w.Shapers(); err != nil {
-			return
+	uc := models.ResolveUserContext(
+		"Workspace",
+		"Workspaces",
+	)
+	if params.Workspace == "" {
+		for _, w := range uc.Workspaces {
+			if err = w.Load("Shapers"); err != nil {
+				return
+			}
+			srs = append(srs, w.Shapers...)
 		}
 	} else {
-		uc.Load("Workspaces.Directories.Workspace")
-		if srs, err = uc.Shapers(); err != nil {
+		var w *models.Workspace
+		if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
 			return
 		}
+		if err = w.Load("Shapers"); err != nil {
+			return
+		}
+		srs = w.Shapers
 	}
 
 	result := []*ShapersIndexItemResult{}
@@ -54,7 +54,6 @@ func ShapersIndex(jparams []byte) (jbody []byte, v *app.Validation, err error) {
 		})
 	}
 
-	body := &app.Body{Result: result}
-	jbody = utils.JsonMarshal(body)
+	jbody = jbodyFor(result)
 	return
 }

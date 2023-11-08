@@ -11,7 +11,7 @@ type Framer struct {
 	Path      string
 	Name      string
 	About     string
-	Config    map[any]any
+	Config    []map[string]any
 }
 
 type FramerInspector struct {
@@ -22,10 +22,7 @@ type FramerInspector struct {
 
 // Construction
 
-func FramerNew(w *Workspace, path string, name string) (fr *Framer) {
-	if w == nil {
-		panic("Framer Workspace is <nil>")
-	}
+func NewFramer(w *Workspace, path string, name string) (fr *Framer) {
 	fr = &Framer{
 		Workspace: w,
 		Path:      path,
@@ -36,10 +33,11 @@ func FramerNew(w *Workspace, path string, name string) (fr *Framer) {
 
 // Inspection
 
-func (fr *Framer) Inspect() (fri *FramerInspector, err error) {
+func (fr *Framer) Inspect() (fri *FramerInspector) {
+	var err error
 	var uri string
 	if uri, err = fr.URI(); err != nil {
-		return
+		uri = ""
 	}
 	fri = &FramerInspector{
 		URI:   uri,
@@ -67,13 +65,14 @@ func (fr *Framer) directory() (dirPath string) {
 
 func (fr *Framer) Load() (err error) {
 	if err = utils.YamlReadFile(fr.directory(), "framer", fr); err != nil {
-		err = app.Error(err, "load framer %s in %s", fr.Name, fr.Path)
+		err = app.ErrorWith(err, "load framer %s in %s", fr.Name, fr.Path)
 	}
 	return
 }
 
-func (fr *Framer) ConfigurationValidate(name string, values map[string]any) (err error) {
-	c := NewConfiguration("frame", name, fr.Config, values)
-	err = c.Validate()
+// Configuration
+
+func (fr *Framer) ConfigurationFormSchema() (schema *FormSchema) {
+	schema = NewFormSchema("framer", fr.Name, fr.Config)
 	return
 }

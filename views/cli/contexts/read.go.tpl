@@ -1,12 +1,8 @@
-{{ with index . "Result" -}}
-{{ if index . "Workspace" -}}
-CONTEXT
-  Workspace: {{ index . "Workspace" }}
-{{ else -}}
-No context
+{{ define "contexts/read" -}}
+{{ with .Result -}}
+Context:{{ if not (.Workspace) }} none
+{{ else }}
+{{ include "contexts/context" . 2 }}
 {{ end -}}
-{{ if index . "Frame" }}  Frame: {{ index . "Frame" }}
-{{ end -}}
-{{ if index . "Shape" }}  Shape: {{ index . "Shape" }}
 {{ end -}}
 {{ end -}}

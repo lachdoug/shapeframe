@@ -1,23 +1,20 @@
 package cli
 
 import (
-	"bufio"
 	"encoding/json"
-	"fmt"
-	"log"
-	"os"
 	"sf/app"
 	"sf/models"
 	"sf/utils"
 
 	"github.com/fatih/color"
+	"github.com/peterh/liner"
 )
 
 // Marshal a params map as JSON
 func jsonParams(m map[string]any) (j []byte) {
 	j, err := json.Marshal(m)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	return
 }
@@ -38,34 +35,39 @@ func resultItems(body map[string]any) (items []map[string]any) {
 }
 
 func stream(body map[string]any) (err error) {
-	var t string
 	ch := make(chan []byte)
 	s := models.StreamLoad(body["Stream"].(string))
+	hideCursor()
 	go s.Read(ch)
 	for b := range ch {
 		m := &models.StreamMessage{}
-		utils.JsonUnmarshal([]byte(b), m)
+		utils.JsonUnmarshal(b, m)
 		if m.Type == "error" {
-			err = app.Error(nil, m.Text)
+			err = app.Error(m.Text)
 			return
-		} else {
-			t = m.Text
 		}
-		fmt.Print(t)
+		app.Print(m.Text)
 	}
+	showCursor()
 	return
 }
 
 // Render a question and prompt for an answer
-func prompt(question string) (ans string) {
-	r := bufio.NewReader(os.Stdin)
-	for {
-		fmt.Fprint(os.Stderr, question+" ")
-		ans, _ = r.ReadString('\n')
-		if ans != "" {
-			break
+func prompt(question string, opts ...string) (answer string, err error) {
+	line := liner.NewLiner()
+	defer func() {
+		if err = line.Close(); err != nil {
+			panic(err)
 		}
+	}()
+	line.SetCtrlCAborts(true)
+
+	suggest := ""
+	if len(opts) > 0 {
+		suggest = opts[0]
 	}
+
+	answer, err = line.PromptWithSuggestion(question+" ", suggest, -1)
 	return
 }
 
@@ -73,6 +75,16 @@ func prompt(question string) (ans string) {
 func green(text string) (green string) {
 	green = color.New(color.FgGreen).Sprint(text)
 	return
+}
+
+// Hide terminal cursor
+func hideCursor() {
+	app.Print("\033[?25l")
+}
+
+// Show terminal cursor
+func showCursor() {
+	app.Print("\033[?25h")
 }
 
 // Slice of strings

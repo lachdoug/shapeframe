@@ -3,11 +3,10 @@ package controllers
 import (
 	"sf/app"
 	"sf/models"
-	"sf/utils"
 )
 
 type ShapesIndexParams struct {
-	Workspace bool // Limit list to workspace context
+	Workspace string // Limit list to workspace
 }
 
 type ShapesIndexItemResult struct {
@@ -19,25 +18,30 @@ type ShapesIndexItemResult struct {
 	IsContext bool
 }
 
-func ShapesIndex(jparams []byte) (jbody []byte, v *app.Validation, err error) {
+func ShapesIndex(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
 	var ss []*models.Shape
+	params := paramsFor[ShapesIndexParams](jparams)
 
-	params := &ShapesIndexParams{}
-	utils.JsonUnmarshal(jparams, params)
-
-	uc := models.UserContextNew()
-	if params.Workspace {
-		uc.Load("Workspace.Frames.Shapes.Frame.Workspace")
-		if uc.Workspace == nil {
-			err = app.Error(nil, "no workspace context")
+	uc := models.ResolveUserContext(
+		"Workspace.Frames.Shapes.Frame.Workspace",
+		"Workspaces.Frames.Shapes.Frame.Workspace",
+	)
+	if params.Workspace == "" {
+		for _, w := range uc.Workspaces {
+			for _, f := range w.Frames {
+				ss = append(ss, f.Shapes...)
+			}
+		}
+	} else {
+		var w *models.Workspace
+		if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
 			return
 		}
-		w := uc.Workspace
-		ss = w.Shapes()
-	} else {
-		uc.Load("Workspaces.Frames.Shapes.Frame.Workspace")
-		ss = uc.Shapes()
+		for _, f := range w.Frames {
+			ss = append(ss, f.Shapes...)
+		}
 	}
+
 	result := []*ShapesIndexItemResult{}
 	for _, s := range ss {
 		result = append(result, &ShapesIndexItemResult{
@@ -50,7 +54,6 @@ func ShapesIndex(jparams []byte) (jbody []byte, v *app.Validation, err error) {
 		})
 	}
 
-	body := &app.Body{Result: result}
-	jbody = utils.JsonMarshal(body)
+	jbody = jbodyFor(result)
 	return
 }

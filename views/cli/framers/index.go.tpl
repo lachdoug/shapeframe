@@ -1,4 +1,5 @@
-{{ $lines := index . "Lines" -}}
+{{ define "framers/index" -}}
+{{ $lines := .Lines -}}
 {{ if le (len $lines) 1 -}}
 No framers
 {{ else -}}
@@ -6,3 +7,5 @@ No framers
 {{ . }}
 {{ end -}}
 {{ end -}}
+{{ end -}}
+

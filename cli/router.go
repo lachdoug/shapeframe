@@ -8,14 +8,12 @@ func Router(args []string) {
 		Summary: "Shapeframe",
 		Description: ss(
 			"Use Shapeframe for provisioning and deployment",
-			"  model systems",
-			"  create configurations and artifacts",
-			"  invoke running systems",
+			"  Model systems",
+			"  Create configurations and artifacts",
+			"  Invoke running systems",
 		),
 		Commands: cs(
 			list,
-			create,
-			destroy,
 			label,
 			configure,
 			inspect,
@@ -25,8 +23,7 @@ func Router(args []string) {
 			enter,
 			exit,
 			context,
-			hi,
-			bye,
+			orchestrate,
 			nuke,
 		),
 	}

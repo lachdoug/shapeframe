@@ -4,62 +4,54 @@ import (
 	"net/url"
 	"sf/app"
 	"sf/models"
-	"sf/utils"
 )
 
-type RepositoryPullsUpdateParams struct {
+type RepositoryPullsCreateParams struct {
 	Workspace string
 	URI       string
 }
 
-type RepositoryPullsUpdateResult struct {
+type RepositoryPullsCreateResult struct {
 	URI       string
-	GitURL    string
+	URL       string
 	Workspace string
 }
 
-func RepositoryPullsUpdate(jparams []byte) (jbody []byte, v *app.Validation, err error) {
-	params := &RepositoryPullsUpdateParams{}
-	utils.JsonUnmarshal(jparams, params)
+func RepositoryPullsCreate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+	var w *models.Workspace
+	var r *models.Repository
+	params := paramsFor[RepositoryPullsCreateParams](jparams)
+	st := models.StreamCreate()
 
-	v = &app.Validation{}
+	vn = &app.Validation{}
 	if params.Workspace == "" {
-		v.Add("Workspace", "must not be blank")
+		vn.Add("Workspace", "must not be blank")
 	}
 	if params.URI == "" {
-		v.Add("URI", "must not be blank")
+		vn.Add("URI", "must not be blank")
 	}
 	if _, err = url.Parse("https://" + params.URI); err != nil {
-		v.Add("URI", "must be valid URI")
+		vn.Add("URI", "must be valid URI")
 	}
-	if v.IsInvalid() {
+	if vn.IsInvalid() {
 		return
 	}
 
-	uc := models.UserContextNew()
-	uc.Load("Workspaces")
-	w := uc.WorkspaceFind(params.Workspace)
-	if w == nil {
-		err = app.Error(nil, "workspace %s does not exist", params.Workspace)
+	uc := models.ResolveUserContext("Workspaces")
+	if w, err = models.ResolveWorkspace(uc, params.Workspace, "Repositories"); err != nil {
 		return
 	}
-	r := w.RepositoryFind(w.GitRepoDirectoryFor(params.URI))
-	if r == nil {
-		err = app.Error(nil, "repository %s does not exist in workspace %s", params.URI, w.Name)
+	if r, err = models.ResolveRepository(w, params.URI, "GitRepo"); err != nil {
 		return
 	}
-	r.Load()
+	r.Update(st)
 
-	s := models.StreamCreate()
-	r.Update(s)
-
-	result := &RepositoryPullsUpdateResult{
+	result := &RepositoryPullsCreateResult{
 		URI:       params.URI,
-		GitURL:    r.GitRepo.URL,
+		URL:       r.GitRepo.URL,
 		Workspace: r.Workspace.Name,
 	}
 
-	body := &app.Body{Result: result, Stream: s.Identifier}
-	jbody = utils.JsonMarshal(body)
+	jbody = jbodyFor(result, st)
 	return
 }

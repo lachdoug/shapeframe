@@ -11,36 +11,85 @@ import (
 )
 
 type Frame struct {
-	ID          uint `gorm:"primaryKey"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   soft_delete.DeletedAt `gorm:"index:idx_nondeleted_workspace_frame,unique"`
-	Workspace   *Workspace            `gorm:"foreignkey:WorkspaceID"`
-	WorkspaceID uint                  `gorm:"index:idx_nondeleted_workspace_frame,unique"`
-	Name        string                `gorm:"index:idx_nondeleted_workspace_frame,unique"`
-	About       string
-	Shapes      []*Shape
-	ConfigJson  datatypes.JSON
-	FramerName  string
-	Framer      *Framer `gorm:"-"`
+	ID                uint `gorm:"primaryKey"`
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	DeletedAt         soft_delete.DeletedAt `gorm:"softDelete:nano;index:idx_nondeleted_workspace_frame,unique"`
+	Workspace         *Workspace            `gorm:"foreignkey:WorkspaceID"`
+	WorkspaceID       uint                  `gorm:"index:idx_nondeleted_workspace_frame,unique"`
+	Name              string                `gorm:"index:idx_nondeleted_workspace_frame,unique"`
+	About             string
+	Shapes            []*Shape
+	ConfigurationJson datatypes.JSON
+	FramerName        string
+	Framer            *Framer `gorm:"-"`
+	Configuration     *Form   `gorm:"-"`
 }
 
 type FrameInspector struct {
-	Name   string
-	About  string
-	Shapes []*ShapeInspector
-	Framer string
+	Name          string
+	About         string
+	Shapes        []*ShapeInspector
+	Framer        string
+	Configuration []map[string]any
 }
 
 // Construction
 
-func FrameNew(w *Workspace, name string) (f *Frame) {
-	if w == nil {
-		panic("Frame Workspace is <nil>")
-	}
+func NewFrame(w *Workspace, name string) (f *Frame) {
 	f = &Frame{
 		Workspace: w,
-		Name:      utils.StringTidy(name),
+		Name:      name,
+	}
+	return
+}
+
+func CreateFrame(w *Workspace, framer string, name string, about string) (f *Frame, err error) {
+	f = NewFrame(w, name)
+	f.FramerName = framer
+	f.About = about
+	if err = f.Load("Framer"); err != nil {
+		return
+	}
+	f.Label()
+	if f.IsExists() {
+		err = app.Error("frame %s already exists in workspace %s", name, w.Name)
+		return
+	}
+	f.Create()
+	return
+}
+
+func ResolveFrame(uc *UserContext, w *Workspace, name string, loads ...string) (f *Frame, err error) {
+	if name == "" {
+		if uc == nil {
+			err = app.Error("no user context")
+			return
+		}
+		f = uc.Frame
+		if f == nil {
+			err = app.Error("no frame context")
+			return
+		}
+	} else {
+		if w == nil {
+			err = app.Error("no workspace")
+			return
+		}
+		if len(w.Frames) == 0 {
+			err = app.Error("no frames exist in workspace %s", w.Name)
+			return
+		}
+		f = w.FindFrame(name)
+		if f == nil {
+			err = app.Error("frame %s does not exist in workspace %s", name, w.Name)
+			return
+		}
+	}
+	if len(loads) > 0 {
+		if err = f.Load(loads...); err != nil {
+			return
+		}
 	}
 	return
 }
@@ -49,10 +98,11 @@ func FrameNew(w *Workspace, name string) (f *Frame) {
 
 func (f *Frame) Inspect() (fi *FrameInspector) {
 	fi = &FrameInspector{
-		Name:   f.Name,
-		About:  f.About,
-		Shapes: f.ShapesInspect(),
-		Framer: f.FramerName,
+		Name:          f.Name,
+		About:         f.About,
+		Shapes:        f.ShapesInspect(),
+		Framer:        f.FramerName,
+		Configuration: f.Configuration.SettingsDetail(),
 	}
 	return
 }
@@ -60,7 +110,6 @@ func (f *Frame) Inspect() (fi *FrameInspector) {
 func (f *Frame) ShapesInspect() (sis []*ShapeInspector) {
 	sis = []*ShapeInspector{}
 	for _, s := range f.Shapes {
-		s.Load()
 		sis = append(sis, s.Inspect())
 	}
 	return
@@ -69,108 +118,78 @@ func (f *Frame) ShapesInspect() (sis []*ShapeInspector) {
 // Data
 
 func (f *Frame) IsExists() (is bool) {
-	if f.Workspace.FrameFind(f.Name) != nil {
+	if f.Workspace.FindFrame(f.Name) != nil {
 		is = true
 		return
 	}
 	return
 }
 
-func (f *Frame) Load(preloads ...string) (err error) {
-	queries.Load(f, f.ID, preloads...)
+func (f *Frame) Load(loads ...string) (err error) {
+	fl := NewFrameLoader(f, loads)
+	err = fl.load()
 	return
 }
 
 func (f *Frame) Assign(params map[string]any) {
-	if params["FramerName"] != nil {
-		f.FramerName = utils.StringTidy(params["FramerName"].(string))
+	if params["Name"] != nil {
+		f.Name = params["Name"].(string)
 	}
 	if params["About"] != nil {
-		f.About = utils.StringTidy(params["About"].(string))
+		f.About = params["About"].(string)
 	}
-	if params["Config"] != nil {
-		f.ConfigJson = datatypes.JSON(utils.JsonMarshal(params["Config"]))
+	if params["Configuration"] != nil {
+		f.ConfigurationJson = datatypes.JSON(utils.JsonMarshal(params["Configuration"]))
 	}
 }
 
-func (f *Frame) Create() (err error) {
+func (f *Frame) Label() {
 	if f.Name == "" {
 		f.Name = f.Framer.Name
 	}
 	if f.About == "" {
 		f.About = f.Framer.About
 	}
-	if f.IsExists() {
-		err = app.Error(nil, "frame %s already exists in workspace %s", f.Name, f.Workspace.Name)
-		return
-	}
+}
+
+func (f *Frame) Create() {
 	queries.Create(f)
-	return
 }
 
-func (f *Frame) Save() (err error) {
+func (f *Frame) Save() {
 	queries.Update(f)
-	return
-}
-
-func (f *Frame) SaveConfiguration() (err error) {
-	if err = f.ConfigurationValidate(); err != nil {
-		return
-	}
-	queries.Update(f)
-	return
 }
 
 func (f *Frame) Destroy() {
 	queries.Delete(f)
 }
 
-// Configuration
+// Orchestration
 
-func (f *Frame) ConfigValues() (config map[string]any) {
-	j := f.ConfigJson.String()
-	if j != "" {
-		utils.JsonUnmarshal([]byte(string(f.ConfigJson)), &config)
-	}
-	return
+func (f *Frame) Orchestrate(st *Stream) {
+	o := NewOrchestration(f, st)
+	go o.apply()
 }
 
-func (f *Frame) ConfigurationValidate() (err error) {
-	err = f.Framer.ConfigurationValidate(f.Name, f.ConfigValues())
+// Configuration
+
+func (f *Frame) ConfigurationSettings() (settings map[string]any) {
+	j := f.ConfigurationJson.String()
+	if j != "" {
+		settings = map[string]any{}
+		utils.JsonUnmarshal([]byte(string(f.ConfigurationJson)), &settings)
+	}
 	return
 }
 
 // Associations
 
-func (f *Frame) SetFramer() (err error) {
-	var fr *Framer
-	if fr, err = f.FramerFind(); err != nil {
-		return
-	} else if fr == nil {
-		err = app.Error(nil, "locate framer %s: no such framer in workspace %s", f.FramerName, f.Workspace.Name)
-		return
-	} else {
-		fr.Load()
-		f.Framer = fr
+func (f *Frame) FindShape(name string) (s *Shape) {
+	for _, s = range f.Shapes {
+		if s.Name == name {
+			return
+		}
 	}
+	s = nil
 	return
-}
-
-func (f *Frame) FramerFind() (sr *Framer, err error) {
-	w := f.Workspace
-	sr, err = w.FramerFind(f.FramerName)
-	return
-}
-
-func (f *Frame) ShapeFind(name string) (s *Shape) {
-	s = &Shape{}
-	f.Lookup("Shapes", "name", name, s)
-	if s.ID == uint(0) {
-		s = nil
-	}
-	return
-}
-
-func (f *Frame) Lookup(assocName string, key string, value string, model any) {
-	queries.Lookup(f, assocName, key, value, model)
 }

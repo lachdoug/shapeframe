@@ -15,6 +15,10 @@ type UserContext struct {
 	Frame       *Frame     `gorm:"foreignkey:FrameID"`
 	Shape       *Shape     `gorm:"foreignkey:ShapeID"`
 	Workspaces  []*Workspace
+	// Frames      []*Frame  `gorm:"-"`
+	// Shapes      []*Shape  `gorm:"-"`
+	// Framers     []*Framer `gorm:"-"`
+	// Shapers     []*Shaper `gorm:"-"`
 }
 
 type UserContextChange struct {
@@ -30,23 +34,24 @@ type UserContextInspector struct {
 
 // Construction
 
-func UserContextNew() (uc *UserContext) {
-	uc = &UserContext{}
-	uc.Singleton()
+func NewUserContext(loads ...string) (uc *UserContext) {
+	uc = &UserContext{
+		Model: gorm.Model{ID: uint(1)},
+	}
+	return
+}
+
+// Resolve user context
+func ResolveUserContext(loads ...string) (uc *UserContext) {
+	uc = NewUserContext()
+	uc.Load(loads...)
 	return
 }
 
 // Data
 
-func (uc *UserContext) Singleton() {
-	uc.Load()
-	if uc.ID == uint(0) {
-		queries.Create(uc)
-	}
-}
-
 func (uc *UserContext) Load(preloads ...string) {
-	queries.Load(uc, uint(1), preloads...)
+	queries.Load(uc, uc.ID, preloads...)
 }
 
 func (uc *UserContext) Save() {
@@ -69,59 +74,6 @@ func (uc *UserContext) Inspect() (uci *UserContextInspector) {
 }
 
 // Associations
-
-func (uc *UserContext) Lookup(assocName string, key string, value string, model any) {
-	queries.Lookup(uc, assocName, key, value, model)
-}
-
-func (uc *UserContext) WorkspacesLoad() (ws []*Workspace) {
-	ws = []*Workspace{}
-	for _, w := range uc.Workspaces {
-		w.Load()
-		ws = append(ws, w)
-	}
-	return
-}
-
-func (uc *UserContext) Frames() (fs []*Frame) {
-	fs = []*Frame{}
-	for _, w := range uc.Workspaces {
-		fs = append(fs, w.Frames...)
-	}
-	return
-}
-
-func (uc *UserContext) Shapes() (ss []*Shape) {
-	ss = []*Shape{}
-	for _, w := range uc.Workspaces {
-		ss = append(ss, w.Shapes()...)
-	}
-	return
-}
-
-func (uc *UserContext) Framers() (frs []*Framer, err error) {
-	frs = []*Framer{}
-	for _, w := range uc.WorkspacesLoad() {
-		var wfrs []*Framer
-		if wfrs, err = w.Framers(); err != nil {
-			return
-		}
-		frs = append(frs, wfrs...)
-	}
-	return
-}
-
-func (uc *UserContext) Shapers() (frs []*Shaper, err error) {
-	frs = []*Shaper{}
-	for _, w := range uc.WorkspacesLoad() {
-		var wsrs []*Shaper
-		if wsrs, err = w.Shapers(); err != nil {
-			return
-		}
-		frs = append(frs, wsrs...)
-	}
-	return
-}
 
 func (uc *UserContext) WorkspaceName() (n string) {
 	if uc.Workspace == nil {
@@ -150,11 +102,12 @@ func (uc *UserContext) ShapeName() (n string) {
 	return
 }
 
-func (uc *UserContext) WorkspaceFind(name string) (w *Workspace) {
-	w = &Workspace{}
-	uc.Lookup("Workspaces", "name", name, w)
-	if w.ID == uint(0) {
-		w = nil
+func (uc *UserContext) FindWorkspace(name string) (w *Workspace) {
+	for _, w = range uc.Workspaces {
+		if w.Name == name {
+			return
+		}
 	}
+	w = nil
 	return
 }

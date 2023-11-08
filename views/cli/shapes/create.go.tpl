@@ -1,3 +1,5 @@
-{{ with index . "Result" -}}
-Created shape {{ index . "Name" }} in frame {{ index . "Frame" }}
+{{ define "shapes/create" -}}
+{{ with .Result -}}
+Successfully added shape {{ .Shape }} to frame {{ .Frame }} workspace {{ .Workspace }}
+{{ end -}}
 {{ end -}}

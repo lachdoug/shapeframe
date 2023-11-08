@@ -9,10 +9,18 @@ import (
 
 func removeRepository() (command any) {
 	command = &cliapp.Command{
-		Name:        "repository",
-		Summary:     "Remove a repository from workspace",
-		Usage:       ss("sf remove repository [URI]"),
-		Aliases:     ss("r"),
+		Name:    "repository",
+		Summary: "Remove a repository from a workspace",
+		Aliases: ss("r"),
+		Usage: ss(
+			"sf remove repository [options] [URI]",
+			"A repository URI must be provided as an argument",
+			"Provide an optional workspace name using the -workspace flag",
+			"  Uses workspace context when not provided",
+		),
+		Flags: ss(
+			"string", "workspace", "Name of the workspace",
+		),
 		Parametizer: removeRepositoryParams,
 		Controller:  controllers.RepositoriesDestroy,
 		Viewer:      cliapp.View("repositories/destroy"),
@@ -20,18 +28,22 @@ func removeRepository() (command any) {
 	return
 }
 
-func removeRepositoryParams(context *cliapp.Context) (jparams []byte, validation *app.Validation, err error) {
-	uc := models.UserContextNew()
-	uc.Load("Workspace")
-	w := uc.Workspace
-	if w == nil {
-		err = app.Error(nil, "no workspace context")
+func removeRepositoryParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+	var w *models.Workspace
+	uri := context.Argument(0)
+	workspace := context.StringFlag("workspace")
+
+	uc := models.ResolveUserContext(
+		"Workspace",
+		"Workspaces",
+	)
+	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
 		return
 	}
 
 	jparams = jsonParams(map[string]any{
 		"Workspace": w.Name,
-		"URI":       context.Argument(0),
+		"URI":       uri,
 	})
 	return
 }

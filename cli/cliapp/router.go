@@ -1,6 +1,8 @@
 package cliapp
 
-import "log"
+import (
+	"sf/app"
+)
 
 type Router struct {
 	Name        string
@@ -13,6 +15,6 @@ type Router struct {
 
 func (r *Router) Run(args []string) {
 	if err := uApp(r).Run(args); err != nil {
-		log.Fatal(err)
+		app.ErrorHandler(err)
 	}
 }

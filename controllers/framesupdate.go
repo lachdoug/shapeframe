@@ -3,64 +3,76 @@ package controllers
 import (
 	"sf/app"
 	"sf/models"
-	"sf/utils"
 )
 
 type FramesUpdateParams struct {
 	Workspace string
 	Frame     string
-	Name      string
-	About     string
+	Update    map[string]any
 }
 
 type FramesUpdateResult struct {
-	From *FramesUpdateResultDetails
-	To   *FramesUpdateResultDetails
+	Workspace string
+	Frame     string
+	From      *FramesUpdateResultDetails
+	To        *FramesUpdateResultDetails
 }
 
 type FramesUpdateResultDetails struct {
-	Name  string
-	About string
+	Name          string
+	About         string
+	Configuration []map[string]any
 }
 
-func FramesUpdate(jparams []byte) (jbody []byte, validation *app.Validation, err error) {
-	params := &FramesUpdateParams{}
-	utils.JsonUnmarshal(jparams, params)
+func FramesUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+	var w *models.Workspace
+	var f *models.Frame
+	params := paramsFor[FramesUpdateParams](jparams)
 
-	uc := models.UserContextNew()
-	uc.Load("Workspaces")
-	w := uc.WorkspaceFind(params.Workspace)
-	if w == nil {
-		err = app.Error(nil, "workspace %s does not exist", params.Workspace)
+	vn = &app.Validation{}
+	if params.Workspace == "" {
+		vn.Add("Workspace", "must not be blank")
+	}
+	if params.Frame == "" {
+		vn.Add("Frame", "must not be blank")
+	}
+	if vn.IsInvalid() {
 		return
 	}
-	f := w.FrameFind(params.Frame)
-	if f == nil {
-		err = app.Error(nil, "frame %s does not exist", params.Frame)
+
+	uc := models.ResolveUserContext(
+		"Workspaces.Frames",
+	)
+	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
+		return
+	}
+	if f, err = models.ResolveFrame(uc, w, params.Frame, "Configuration"); err != nil {
 		return
 	}
 
 	result := &FramesUpdateResult{
+		Workspace: w.Name,
+		Frame:     f.Name,
 		From: &FramesUpdateResultDetails{
-			Name:  f.Name,
-			About: f.About,
+			Name:          f.Name,
+			About:         f.About,
+			Configuration: f.Configuration.SettingsDetail(),
 		},
 	}
 
-	f.Assign(map[string]any{
-		"Name":  params.Name,
-		"About": params.About,
-	})
-	if err = f.Save(); err != nil {
+	f.Assign(params.Update)
+	f.Save()
+
+	if err = f.Load("Configuration"); err != nil {
 		return
 	}
 
 	result.To = &FramesUpdateResultDetails{
-		Name:  f.Name,
-		About: f.About,
+		Name:          f.Name,
+		About:         f.About,
+		Configuration: f.Configuration.SettingsDetail(),
 	}
 
-	body := &app.Body{Result: result}
-	jbody = utils.JsonMarshal(body)
+	jbody = jbodyFor(result)
 	return
 }

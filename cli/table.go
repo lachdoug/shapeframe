@@ -103,13 +103,6 @@ func (wt *Table) generate() (table map[string]any) {
 	return
 }
 
-var tableCellAsteriskIfTrueValueFn func(any) string = func(in any) (out string) {
-	if in.(bool) {
-		out = "*"
-	}
-	return
-}
-
 var tableCellStringValueFn func(any) string = func(in any) (out string) {
 	out = in.(string)
 	return

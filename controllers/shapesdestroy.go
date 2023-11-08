@@ -3,64 +3,63 @@ package controllers
 import (
 	"sf/app"
 	"sf/models"
-	"sf/utils"
 )
 
 type ShapesDestroyParams struct {
 	Workspace string
 	Frame     string
-	Name      string
+	Shape     string
 }
 
 type ShapesDestroyResult struct {
-	Frame string
-	Name  string
+	Workspace string
+	Frame     string
+	Shape     string
 }
 
-func ShapesDestroy(jparams []byte) (jbody []byte, v *app.Validation, err error) {
-	params := &ShapesDestroyParams{}
-	utils.JsonUnmarshal(jparams, params)
+func ShapesDestroy(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+	var w *models.Workspace
+	var f *models.Frame
+	var s *models.Shape
+	params := paramsFor[ShapesDestroyParams](jparams)
 
-	v = &app.Validation{}
+	vn = &app.Validation{}
 	if params.Workspace == "" {
-		v.Add("Workspace", "must not be blank")
+		vn.Add("Workspace", "must not be blank")
 	}
 	if params.Frame == "" {
-		v.Add("Frame", "must not be blank")
+		vn.Add("Frame", "must not be blank")
 	}
-	if params.Name == "" {
-		v.Add("Name", "must not be blank")
+	if params.Shape == "" {
+		vn.Add("Shape", "must not be blank")
 	}
-	if v.IsInvalid() {
+	if vn.IsInvalid() {
 		return
 	}
 
-	uc := models.UserContextNew()
-	w := uc.WorkspaceFind(params.Workspace)
-	if w == nil {
-		err = app.Error(nil, "workspace %s does not exist", params.Workspace)
+	uc := models.ResolveUserContext(
+		"Shape",
+		"Workspaces.Frames.Shapes",
+	)
+	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
 		return
 	}
-	f := w.FrameFind(params.Frame)
-	if f == nil {
-		err = app.Error(nil, "frame %s does not exist in workspace %s", params.Frame, params.Workspace)
+	if f, err = models.ResolveFrame(uc, w, params.Frame); err != nil {
 		return
 	}
-	s := f.ShapeFind(params.Name)
-	if s == nil {
-		err = app.Error(nil, "shape %s does not exist in frame %s", params.Name, f.Name)
+	if s, err = models.ResolveShape(uc, f, params.Shape); err != nil {
 		return
 	}
-
-	uc.Load("Shape")
-	if uc.Shape.ID == s.ID {
+	if uc.Shape != nil && uc.Shape.ID == s.ID {
 		uc.Clear("Shape")
 	}
-
 	s.Destroy()
 
-	result := &ShapesDestroyResult{Frame: f.Name, Name: s.Name}
-	body := &app.Body{Result: result}
-	jbody = utils.JsonMarshal(body)
+	result := &ShapesDestroyResult{
+		Frame: f.Name,
+		Shape: s.Name,
+	}
+
+	jbody = jbodyFor(result)
 	return
 }

@@ -6,11 +6,13 @@ import (
 )
 
 func Migrate() {
-	database.DB.AutoMigrate(
+	if err := database.DB.AutoMigrate(
 		&models.Shape{},
 		&models.Frame{},
 		&models.Workspace{},
 		&models.Directory{},
 		&models.UserContext{},
-	)
+	); err != nil {
+		panic(err)
+	}
 }

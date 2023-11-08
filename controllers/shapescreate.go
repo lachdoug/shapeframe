@@ -3,55 +3,62 @@ package controllers
 import (
 	"sf/app"
 	"sf/models"
-	"sf/utils"
 )
 
 type ShapesCreateParams struct {
-	Shaper string
-	Name   string
-	About  string
+	Workspace string
+	Frame     string
+	Shaper    string
+	Name      string
+	About     string
 }
 
 type ShapesCreateResult struct {
-	Frame string
-	Name  string
+	Workspace string
+	Frame     string
+	Shape     string
 }
 
-func ShapesCreate(jparams []byte) (jbody []byte, v *app.Validation, err error) {
-	params := &ShapesCreateParams{}
-	utils.JsonUnmarshal(jparams, params)
+func ShapesCreate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+	var w *models.Workspace
+	var f *models.Frame
+	var s *models.Shape
+	params := paramsFor[ShapesCreateParams](jparams)
 
-	v = &app.Validation{}
+	vn = &app.Validation{}
+	if params.Workspace == "" {
+		vn.Add("Workspace", "must not be blank")
+	}
+	if params.Frame == "" {
+		vn.Add("Frame", "must not be blank")
+	}
 	if params.Shaper == "" {
-		v.Add("Shaper", "must not be blank")
+		vn.Add("Shaper", "must not be blank")
 	}
-	if v.IsInvalid() {
+	if vn.IsInvalid() {
 		return
 	}
 
-	uc := models.UserContextNew()
-	uc.Load("Frame")
-	f := uc.Frame
-	if f == nil {
-		err = app.Error(nil, "no frame context")
+	uc := models.ResolveUserContext(
+		"Workspace.Frames.Shapes",
+		"Workspaces.Frames.Shapes",
+	)
+	if w, err = models.ResolveWorkspace(uc, params.Workspace, "Shapers"); err != nil {
 		return
 	}
-	f.Load("Workspace.Directories.Workspace", "Shapes")
-
-	s := models.ShapeNew(f, params.Name)
-	s.Assign(map[string]any{
-		"ShaperName": params.Shaper,
-		"About":      params.About,
-	})
-	if err = s.SetShaper(); err != nil {
+	if f, err = models.ResolveFrame(uc, w, params.Frame); err != nil {
 		return
 	}
-	if err = s.Create(); err != nil {
+	if s, err = models.CreateShape(f, params.Shaper, params.Name, params.About); err != nil {
 		return
 	}
 
-	result := &ShapesCreateResult{Frame: f.Name, Name: s.Name}
-	body := &app.Body{Result: result}
-	jbody = utils.JsonMarshal(body)
+	result := &ShapesCreateResult{
+		Workspace: w.Name,
+		Frame:     f.Name,
+		Shape:     s.Name,
+	}
+
+	jbody = jbodyFor(result)
 	return
 }

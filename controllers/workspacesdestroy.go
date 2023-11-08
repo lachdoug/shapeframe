@@ -3,50 +3,46 @@ package controllers
 import (
 	"sf/app"
 	"sf/models"
-	"sf/utils"
 )
 
 type WorkspacesDestroyParams struct {
-	Name string
+	Workspace string
 }
 
 type WorkspacesDestroyResult struct {
-	Name string
+	Workspace string
 }
 
-func WorkspacesDestroy(jparams []byte) (jbody []byte, v *app.Validation, err error) {
-	params := &WorkspacesDestroyParams{}
-	utils.JsonUnmarshal(jparams, params)
+func WorkspacesDestroy(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+	var w *models.Workspace
+	params := paramsFor[WorkspacesDestroyParams](jparams)
 
-	v = &app.Validation{}
-	if params.Name == "" {
-		v.Add("Name", "must not be blank")
+	vn = &app.Validation{}
+	if params.Workspace == "" {
+		vn.Add("Workspace", "must not be blank")
 	}
-	if v.IsInvalid() {
+	if vn.IsInvalid() {
 		return
 	}
 
-	uc := models.UserContextNew()
-	w := uc.WorkspaceFind(params.Name)
-	if w == nil {
-		err = app.Error(nil, "workspace %s does not exist", params.Name)
+	uc := models.ResolveUserContext(
+		"Workspace", "Frame", "Shape",
+		"Workspaces",
+	)
+	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
 		return
 	}
-
-	uc.Load("Workspace")
-	if uc.Workspace.ID == w.ID {
+	if uc.Workspace != nil && uc.Workspace.ID == w.ID {
 		uc.Clear("Shape")
 		uc.Clear("Frame")
 		uc.Clear("Workspace")
 	}
-
 	w.Destroy()
 
 	result := &WorkspacesDestroyResult{
-		Name: w.Name,
+		Workspace: w.Name,
 	}
 
-	body := &app.Body{Result: result}
-	jbody = utils.JsonMarshal(body)
+	jbody = jbodyFor(result)
 	return
 }

@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"strings"
 )
 
 type Validation struct {
@@ -14,22 +13,20 @@ type InvalidField struct {
 	Message string
 }
 
-func (validation *Validation) Add(name string, message string) {
-	validation.Failures = append(validation.Failures, &InvalidField{name, message})
+func (v *Validation) Add(name string, message string) {
+	v.Failures = append(v.Failures, &InvalidField{name, message})
 }
 
-func (validation *Validation) IsInvalid() (is bool) {
-	if validation.Failures != nil {
+func (v *Validation) IsInvalid() (is bool) {
+	if v.Failures != nil {
 		is = true
 	}
 	return
 }
 
-func (validation *Validation) Error() (s string) {
-	fs := []string{}
-	for _, f := range validation.Failures {
-		fs = append(fs, fmt.Sprintf("%s %s", f.Key, f.Message))
+func (v *Validation) Error() (s string) {
+	for _, f := range v.Failures {
+		s = s + fmt.Sprintf("\n  - %s %s", f.Key, f.Message)
 	}
-	s = strings.Join(fs, "\n")
 	return
 }

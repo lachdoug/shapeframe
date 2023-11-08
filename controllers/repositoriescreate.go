@@ -4,7 +4,6 @@ import (
 	"net/url"
 	"sf/app"
 	"sf/models"
-	"sf/utils"
 )
 
 type RepositoriesCreateParams struct {
@@ -20,47 +19,42 @@ type RepositoriesCreateResult struct {
 	Workspace string
 }
 
-func RepositoriesCreate(jparams []byte) (jbody []byte, v *app.Validation, err error) {
-	params := &RepositoriesCreateParams{}
-	utils.JsonUnmarshal(jparams, params)
+func RepositoriesCreate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+	var w *models.Workspace
+	var r *models.Repository
+	params := paramsFor[RepositoriesCreateParams](jparams)
+	st := models.StreamCreate()
 
-	v = &app.Validation{}
+	vn = &app.Validation{}
 	if params.Workspace == "" {
-		v.Add("Workspace", "must not be blank")
+		vn.Add("Workspace", "must not be blank")
 	}
 	if params.URI == "" {
-		v.Add("URI", "must not be blank")
+		vn.Add("URI", "must not be blank")
 	}
 	if _, err = url.Parse("https://" + params.URI); err != nil {
-		v.Add("URI", "must be valid URI")
+		vn.Add("URI", "must be valid URI")
 	}
-	if v.IsInvalid() {
+	if vn.IsInvalid() {
 		return
 	}
 
-	uc := models.UserContextNew()
-	w := uc.WorkspaceFind(params.Workspace)
-	if w == nil {
-		err = app.Error(nil, "workspace %s does not exist", params.Workspace)
+	uc := models.ResolveUserContext(
+		"Workspaces",
+	)
+	if w, err = models.ResolveWorkspace(uc, params.Workspace, "Repositories"); err != nil {
 		return
 	}
-	path := w.GitRepoDirectoryFor(params.URI)
-	r := models.RepositoryNew(w, path)
-	if r.IsExists() {
-		err = app.Error(nil, "repository %s already exists in workspace %s", params.URI, w.Name)
+	if r, err = models.CreateRepository(w, params.URI, params.SSH, st); err != nil {
 		return
 	}
-
-	s := models.StreamCreate()
-	r.Create(s, params.URI, params.SSH)
 
 	result := &RepositoriesCreateResult{
 		Workspace: r.Workspace.Name,
-		Path:      path,
 		URI:       params.URI,
 		URL:       r.GitRepo.OriginURL(params.URI, params.SSH),
 	}
-	body := &app.Body{Result: result, Stream: s.Identifier}
-	jbody = utils.JsonMarshal(body)
+
+	jbody = jbodyFor(result, st)
 	return
 }

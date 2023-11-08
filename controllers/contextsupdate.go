@@ -3,7 +3,6 @@ package controllers
 import (
 	"sf/app"
 	"sf/models"
-	"sf/utils"
 )
 
 type ContextsUpdateParams struct {
@@ -13,56 +12,53 @@ type ContextsUpdateParams struct {
 }
 
 type ContextsUpdateResult struct {
-	Exit  *models.UserContextInspector
-	Enter *models.UserContextInspector
+	From *models.UserContextInspector
+	To   *models.UserContextInspector
 }
 
-func ContextsUpdate(jparams []byte) (jbody []byte, validation *app.Validation, err error) {
-	params := &ContextsUpdateParams{}
-	utils.JsonUnmarshal(jparams, params)
+func ContextsUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+	var w *models.Workspace
+	var f *models.Frame
+	var s *models.Shape
+	params := paramsFor[ContextsUpdateParams](jparams)
 
-	uc := models.UserContextNew()
-	uc.Load("Workspace", "Frame", "Shape")
+	uc := models.ResolveUserContext(
+		"Workspace",
+		"Frame",
+		"Shape",
+		"Workspaces.Frames.Shapes",
+	)
 
-	result := &ContextsUpdateResult{Exit: uc.Inspect()}
-
-	s := &models.Shape{}
-	f := &models.Frame{}
-	w := &models.Workspace{}
+	result := &ContextsUpdateResult{From: uc.Inspect()}
 
 	if params.Workspace != "" {
-		w = uc.WorkspaceFind(params.Workspace)
-		if w == nil {
-			err = app.Error(nil, "workspace %s does not exist", params.Workspace)
+		if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
 			return
-		} else {
-			uc.Workspace = w
 		}
+		uc.Workspace = w
+	} else {
+		uc.Clear("Workspace")
 	}
 	if params.Frame != "" {
-		f = w.FrameFind(params.Frame)
-		if f == nil {
-			err = app.Error(nil, "frame %s does not exist in workspace %s", params.Frame, params.Workspace)
+		if f, err = models.ResolveFrame(uc, w, params.Frame); err != nil {
 			return
-		} else {
-			uc.Frame = f
 		}
+		uc.Frame = f
+	} else {
+		uc.Clear("Frame")
 	}
 	if params.Shape != "" {
-		s = f.ShapeFind(params.Shape)
-		if s == nil {
-			err = app.Error(nil, "shape %s does not exist in frame %s", params.Shape, params.Frame)
+		if s, err = models.ResolveShape(uc, f, params.Shape); err != nil {
 			return
-		} else {
-			uc.Shape = s
 		}
+		uc.Shape = s
+	} else {
+		uc.Clear("Shape")
 	}
-
 	uc.Save()
 
-	result.Enter = uc.Inspect()
+	result.To = uc.Inspect()
 
-	body := &app.Body{Result: result}
-	jbody = utils.JsonMarshal(body)
+	jbody = jbodyFor(result)
 	return
 }

@@ -3,18 +3,17 @@ package controllers
 import (
 	"sf/app"
 	"sf/models"
-	"sf/utils"
 )
 
 type WorkspacesUpdateParams struct {
 	Workspace string
-	Name      string
-	About     string
+	Update    map[string]any
 }
 
 type WorkspacesUpdateResult struct {
-	From *WorkspacesUpdateResultDetails
-	To   *WorkspacesUpdateResultDetails
+	Workspace string
+	From      *WorkspacesUpdateResultDetails
+	To        *WorkspacesUpdateResultDetails
 }
 
 type WorkspacesUpdateResultDetails struct {
@@ -22,39 +21,39 @@ type WorkspacesUpdateResultDetails struct {
 	About string
 }
 
-func WorkspacesUpdate(jparams []byte) (jbody []byte, validation *app.Validation, err error) {
-	params := &WorkspacesUpdateParams{}
-	utils.JsonUnmarshal(jparams, params)
+func WorkspacesUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+	var w *models.Workspace
+	params := paramsFor[WorkspacesUpdateParams](jparams)
 
-	uc := models.UserContextNew()
-	uc.Load("Workspaces")
-	w := uc.WorkspaceFind(params.Workspace)
-	if w == nil {
-		err = app.Error(nil, "workspace %s does not exist", params.Workspace)
+	vn = &app.Validation{}
+	if params.Workspace == "" {
+		vn.Add("Workspace", "must not be blank")
+	}
+	if vn.IsInvalid() {
+		return
+	}
+
+	uc := models.ResolveUserContext("Workspaces")
+	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
 		return
 	}
 
 	result := &WorkspacesUpdateResult{
+		Workspace: w.Name,
 		From: &WorkspacesUpdateResultDetails{
 			Name:  w.Name,
 			About: w.About,
 		},
 	}
 
-	w.Assign(map[string]any{
-		"Name":  params.Name,
-		"About": params.About,
-	})
-	if err = w.Save(); err != nil {
-		return
-	}
+	w.Assign(params.Update)
+	w.Save()
 
 	result.To = &WorkspacesUpdateResultDetails{
 		Name:  w.Name,
 		About: w.About,
 	}
 
-	body := &app.Body{Result: result}
-	jbody = utils.JsonMarshal(body)
+	jbody = jbodyFor(result)
 	return
 }

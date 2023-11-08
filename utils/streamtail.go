@@ -15,7 +15,10 @@ func StreamTail(dirPath string, ch chan []byte) {
 	f, err := os.Open(filePath)
 	checkErr(err)
 
-	defer f.Close()
+	defer func() {
+		err := f.Close()
+		checkErr(err)
+	}()
 
 	r := bufio.NewReader(f)
 
@@ -28,10 +31,9 @@ func StreamTail(dirPath string, ch chan []byte) {
 				break
 			}
 		}
-		// Check for EOT
-		if bytes.Equal(b, []byte{4}) {
+		if bytes.Equal(b, []byte{4}) { // Check for EOT
 			break
-		} else if !bytes.Equal(b, []byte{}) {
+		} else if !bytes.Equal(b, []byte{}) { // Skip empty bytes
 			ch <- bytes.Trim(b, string([]byte{27}))
 		}
 	}

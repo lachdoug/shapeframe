@@ -3,56 +3,62 @@ package controllers
 import (
 	"sf/app"
 	"sf/models"
-	"sf/utils"
 )
 
 type FrameConfigurationsUpdateParams struct {
-	Workspace string
-	Name      string
-	Config    map[string]any
+	Workspace     string
+	Frame         string
+	Configuration map[string]any
 }
 
 type FrameConfigurationsUpdateResult struct {
-	Workspace string
-	Name      string
-	Config    map[string]any
+	Workspace     string
+	Frame         string
+	Configuration []map[string]any
 }
 
-func FrameConfigurationsUpdate(jparams []byte) (jbody []byte, validation *app.Validation, err error) {
-	params := &FrameConfigurationsUpdateParams{}
-	utils.JsonUnmarshal(jparams, params)
+func FrameConfigurationsUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+	var w *models.Workspace
+	var f *models.Frame
+	params := paramsFor[FrameConfigurationsUpdateParams](jparams)
 
-	uc := models.UserContextNew()
-	uc.Load("Workspaces")
-	w := uc.WorkspaceFind(params.Workspace)
-	if w == nil {
-		err = app.Error(nil, "workspace %s does not exist", params.Workspace)
-		return
+	vn = &app.Validation{}
+	if params.Workspace == "" {
+		vn.Add("Workspace", "must not be blank")
 	}
-	f := w.FrameFind(params.Name)
-	if f == nil {
-		err = app.Error(nil, "frame %s does not exist", params.Name)
+	if params.Frame == "" {
+		vn.Add("Frame", "must not be blank")
+	}
+	if vn.IsInvalid() {
 		return
 	}
 
-	f.Load("Workspace.Directories.Workspace")
-	if err = f.SetFramer(); err != nil {
+	uc := models.ResolveUserContext("Workspaces.Frames")
+	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
 		return
 	}
+	if f, err = models.ResolveFrame(uc, w, params.Frame); err != nil {
+		return
+	}
+
 	f.Assign(map[string]any{
-		"Config": params.Config,
+		"Configuration": params.Configuration,
 	})
-	if err = f.SaveConfiguration(); err != nil {
+	f.Save()
+
+	if err = f.Load("Configuration"); err != nil {
+		return
+	}
+	if err = f.Configuration.Validate(); err != nil {
 		return
 	}
 
 	result := &FrameConfigurationsUpdateResult{
-		Workspace: w.Name,
-		Name:      f.Name,
-		Config:    f.ConfigValues(),
+		Workspace:     w.Name,
+		Frame:         f.Name,
+		Configuration: f.Configuration.SettingsDetail(),
 	}
 
-	body := &app.Body{Result: result}
-	jbody = utils.JsonMarshal(body)
+	jbody = jbodyFor(result)
 	return
 }
