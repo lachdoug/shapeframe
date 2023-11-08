@@ -6,10 +6,10 @@ import (
 )
 
 type ShapeConfigurationsUpdateParams struct {
-	Workspace     string
-	Frame         string
-	Shape         string
-	Configuration map[string]any
+	Workspace string
+	Frame     string
+	Shape     string
+	Update    map[string]any
 }
 
 type ShapeConfigurationsUpdateResult struct {
@@ -46,26 +46,30 @@ func ShapeConfigurationsUpdate(jparams []byte) (jbody []byte, vn *app.Validation
 	if f, err = models.ResolveFrame(uc, w, params.Frame); err != nil {
 		return
 	}
-	if s, err = models.ResolveShape(uc, f, params.Shape); err != nil {
+	if s, err = models.ResolveShape(uc, f, params.Shape, "Configuration"); err != nil {
 		return
 	}
 
-	s.Assign(map[string]any{
-		"Configuration": params.Configuration,
-	})
+	result := &ShapesUpdateResult{
+		Workspace: w.Name,
+		Frame:     f.Name,
+		Shape:     s.Name,
+		From: &ShapesUpdateResultDetails{
+			Configuration: s.Configuration.SettingsDetail(),
+		},
+	}
+
+	s.Assign(params.Update)
 	s.Save()
 
 	if err = s.Load("Configuration"); err != nil {
 		return
 	}
-	if err = s.Configuration.Validate(); err != nil {
+	if vn = s.Configuration.Validate(); vn != nil {
 		return
 	}
 
-	result := &ShapeConfigurationsUpdateResult{
-		Workspace:     w.Name,
-		Frame:         f.Name,
-		Shape:         s.Name,
+	result.To = &ShapesUpdateResultDetails{
 		Configuration: s.Configuration.SettingsDetail(),
 	}
 

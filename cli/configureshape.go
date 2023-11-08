@@ -32,8 +32,12 @@ func configureShape() (command any) {
 			"string", "shape", "Name of the shape",
 		),
 		Parametizer: configureShapeParams,
-		Controller:  controllers.ShapesUpdate,
-		Viewer:      configureShapeViewer,
+		Controller:  controllers.ShapeConfigurationsUpdate,
+		Viewer: cliapp.View(
+			"shapeconfigurations/update",
+			"configurations/configuration",
+			"configurations/setting",
+		),
 	}
 	return
 }
@@ -86,37 +90,5 @@ func configureShapeParams(context *cliapp.Context) (jparams []byte, vn *app.Vali
 		"Shape":     s.Name,
 		"Update":    update,
 	})
-	return
-}
-
-func configureShapeViewer(body map[string]any) (output string, err error) {
-	var w *models.Workspace
-	var f *models.Frame
-	var s *models.Shape
-	result := resultItem(body)
-
-	uc := models.ResolveUserContext("Workspaces.Frames.Shapes")
-	if w, err = models.ResolveWorkspace(uc, result["Workspace"].(string)); err != nil {
-		return
-	}
-	if f, err = models.ResolveFrame(uc, w, result["Frame"].(string)); err != nil {
-		return
-	}
-	if s, err = models.ResolveShape(uc, f, result["Shape"].(string), "Configuration"); err != nil {
-		return
-	}
-
-	if v := s.Configuration.Validate(); v != nil {
-		err = app.ErrorWith(v, "invalid")
-		return
-	} else {
-		if output, err = cliapp.View(
-			"shapeconfigurations/update",
-			"configurations/configuration",
-			"configurations/setting",
-		)(body); err != nil {
-			return
-		}
-	}
 	return
 }

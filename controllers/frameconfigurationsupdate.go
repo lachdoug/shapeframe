@@ -6,9 +6,9 @@ import (
 )
 
 type FrameConfigurationsUpdateParams struct {
-	Workspace     string
-	Frame         string
-	Configuration map[string]any
+	Workspace string
+	Frame     string
+	Update    map[string]any
 }
 
 type FrameConfigurationsUpdateResult struct {
@@ -37,25 +37,29 @@ func FrameConfigurationsUpdate(jparams []byte) (jbody []byte, vn *app.Validation
 	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, params.Frame); err != nil {
+	if f, err = models.ResolveFrame(uc, w, params.Frame, "Configuration"); err != nil {
 		return
 	}
 
-	f.Assign(map[string]any{
-		"Configuration": params.Configuration,
-	})
+	result := &FramesUpdateResult{
+		Workspace: w.Name,
+		Frame:     f.Name,
+		From: &FramesUpdateResultDetails{
+			Configuration: f.Configuration.SettingsDetail(),
+		},
+	}
+
+	f.Assign(params.Update)
 	f.Save()
 
 	if err = f.Load("Configuration"); err != nil {
 		return
 	}
-	if err = f.Configuration.Validate(); err != nil {
+	if vn = f.Configuration.Validate(); vn != nil {
 		return
 	}
 
-	result := &FrameConfigurationsUpdateResult{
-		Workspace:     w.Name,
-		Frame:         f.Name,
+	result.To = &FramesUpdateResultDetails{
 		Configuration: f.Configuration.SettingsDetail(),
 	}
 

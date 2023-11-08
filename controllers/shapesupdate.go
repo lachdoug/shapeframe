@@ -55,7 +55,7 @@ func ShapesUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) 
 	if f, err = models.ResolveFrame(uc, w, params.Frame); err != nil {
 		return
 	}
-	if s, err = models.ResolveShape(uc, f, params.Shape, "Configuration"); err != nil {
+	if s, err = models.ResolveShape(uc, f, params.Shape); err != nil {
 		return
 	}
 
@@ -64,23 +64,17 @@ func ShapesUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) 
 		Frame:     f.Name,
 		Shape:     s.Name,
 		From: &ShapesUpdateResultDetails{
-			Name:          s.Name,
-			About:         s.About,
-			Configuration: s.Configuration.SettingsDetail(),
+			Name:  s.Name,
+			About: s.About,
 		},
 	}
 
 	s.Assign(params.Update)
 	s.Save()
 
-	if err = s.Load("Configuration"); err != nil {
-		return
-	}
-
 	result.To = &ShapesUpdateResultDetails{
-		Name:          s.Name,
-		About:         s.About,
-		Configuration: s.Configuration.SettingsDetail(),
+		Name:  s.Name,
+		About: s.About,
 	}
 
 	jbody = jbodyFor(result)
