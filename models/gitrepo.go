@@ -1,11 +1,8 @@
 package models
 
 import (
-	"fmt"
-	"net/url"
-	"path/filepath"
+	"sf/app"
 	"sf/utils"
-	"strings"
 
 	"github.com/go-git/go-git/v5"
 )
@@ -13,9 +10,6 @@ import (
 type GitRepo struct {
 	Workspace *Workspace
 	Path      string
-	URI       string
-	URL       string
-	Branch    string
 	Shapers   []*Shaper
 	Framers   []*Framer
 }
@@ -40,11 +34,23 @@ func NewGitRepo(w *Workspace, path string) (g *GitRepo) {
 
 // Inspection
 
-func (g *GitRepo) Inspect() (gri *GitRepoInspector) {
+func (g *GitRepo) Inspect() (gri *GitRepoInspector, err error) {
+	var uri string
+	var url string
+	var branch string
+	if uri, err = g.URI(); err != nil {
+		return
+	}
+	if url, err = g.URL(); err != nil {
+		return
+	}
+	if branch, err = g.Branch(); err != nil {
+		return
+	}
 	gri = &GitRepoInspector{
-		URI:     g.URI,
-		URL:     g.URL,
-		Branch:  g.Branch,
+		URI:     uri,
+		URL:     url,
+		Branch:  branch,
 		Shapers: g.ShapersInspect(),
 		Framers: g.FramersInspect(),
 	}
@@ -69,20 +75,6 @@ func (g *GitRepo) FramersInspect() (fris []*FramerInspector) {
 	return
 }
 
-// URL/URI
-
-func (g *GitRepo) OriginURL(uri string, ssh bool) (u string) {
-	uUrl, _ := url.Parse("https://" + uri)
-	host := uUrl.Host
-	path := filepath.Join(strings.Split(uUrl.Path, "/")...)
-	if ssh {
-		u = fmt.Sprintf("git@%s:%s.git", host, path)
-	} else {
-		u = fmt.Sprintf("https://%s/%s", host, path)
-	}
-	return
-}
-
 // Data
 
 func (g *GitRepo) isExists() (is bool) {
@@ -100,23 +92,26 @@ func (g *GitRepo) remove() {
 	utils.RemoveDir(g.Path)
 }
 
-func (g *GitRepo) clone(uri string, ssh bool, st *Stream) {
+func (g *GitRepo) clone(url string, st *utils.Stream) {
+	utils.GitRemoteClone(g.Path, url, st)
 	var err error
+	tmp := utils.TempDir("clone")
 	d := g.Path
-	utils.MakeDir(d)
+	utils.RemoveDir(tmp)
+	utils.MakeDir(tmp)
 	o := &git.CloneOptions{
-		URL:      g.OriginURL(uri, ssh),
+		URL:      url,
 		Depth:    1,
 		Progress: st,
 	}
-	if _, err = git.PlainClone(d, false, o); err != nil {
+	if _, err = git.PlainClone(tmp, false, o); err != nil {
 		st.Error(err)
-		g.remove()
 	}
+	utils.MoveDir(tmp, d)
 	st.Close()
 }
 
-func (g *GitRepo) pull(st *Stream) {
+func (g *GitRepo) pull(st *utils.Stream) {
 	var gr *git.Repository
 	var gw *git.Worktree
 	var err error
@@ -138,4 +133,27 @@ func (g *GitRepo) pull(st *Stream) {
 		}
 	}
 	st.Close()
+}
+
+// Repo
+
+func (g *GitRepo) URI() (url string, err error) {
+	if url, err = utils.GitRepoURI(g.Path); err != nil {
+		err = app.ErrorWith(err, "gitrepo uri")
+	}
+	return
+}
+
+func (g *GitRepo) URL() (url string, err error) {
+	if url, err = utils.GitRepoURL(g.Path); err != nil {
+		err = app.ErrorWith(err, "gitrepo url")
+	}
+	return
+}
+
+func (g *GitRepo) Branch() (branch string, err error) {
+	if branch, err = utils.GitRepoBranch(g.Path); err != nil {
+		err = app.ErrorWith(err, "gitrepo branch")
+	}
+	return
 }

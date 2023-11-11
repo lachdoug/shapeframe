@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
 	"sf/models"
@@ -38,7 +37,7 @@ func configureFrame() (command any) {
 	return
 }
 
-func configureFrameParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func configureFrameParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
 	var f *models.Frame
 	frame := context.StringFlag("frame")
@@ -58,26 +57,22 @@ func configureFrameParams(context *cliapp.Context) (jparams []byte, vn *app.Vali
 	}
 
 	var settings map[string]any
-	c := f.Configuration
+	fm := f.Configuration.Form
 	if len(values) == 0 {
-		form := &Form{Model: c}
+		form := &Form{Model: fm}
 		if settings, err = form.prompts(); err != nil {
 			return
 		}
 	} else {
-		if settings, err = c.SettingsForValues(values); err != nil {
+		if settings, err = fm.SettingsForValues(values); err != nil {
 			return
 		}
-	}
-
-	update := map[string]any{
-		"Configuration": settings,
 	}
 
 	jparams = jsonParams(map[string]any{
 		"Workspace": w.Name,
 		"Frame":     f.Name,
-		"Update":    update,
+		"Update":    settings,
 	})
 	return
 }

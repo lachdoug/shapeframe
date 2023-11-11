@@ -18,11 +18,12 @@ func addRepository() (command any) {
 			"A repository URI must be provided as an argument",
 			"Provide an optional workspace name using the -workspace flag",
 			"  Uses workspace context when not provided",
-			"Clone with ssh by setting the -ssh flag",
+			"Clone with https by setting the -https flag",
+			"  Otherwise uses SSS",
 		),
 		Flags: ss(
 			"string", "workspace", "Workspace name",
-			"bool", "ssh", "Use SSH for git clone",
+			"bool", "https", "Use HTTPS for git clone and pull",
 		),
 		Parametizer: addRepositoryParams,
 		Controller:  controllers.RepositoriesCreate,
@@ -31,11 +32,15 @@ func addRepository() (command any) {
 	return
 }
 
-func addRepositoryParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func addRepositoryParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
 	uri := context.Argument(0)
-	ssh := context.BoolFlag("ssh")
+	protocol := "ssh"
 	workspace := context.StringFlag("workspace")
+
+	if context.BoolFlag("https") {
+		protocol = "HTTPS"
+	}
 
 	uc := models.ResolveUserContext("Workspace", "Workspaces")
 	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
@@ -45,7 +50,7 @@ func addRepositoryParams(context *cliapp.Context) (jparams []byte, vn *app.Valid
 	jparams = jsonParams(map[string]any{
 		"Workspace": w.Name,
 		"URI":       uri,
-		"SSH":       ssh,
+		"Protocol":  protocol,
 	})
 	return
 }
@@ -53,15 +58,8 @@ func addRepositoryParams(context *cliapp.Context) (jparams []byte, vn *app.Valid
 func addRepositoryViewer(body map[string]any) (output string, err error) {
 	var w *models.Workspace
 	var r *models.Repository
+	var gri *models.GitRepoInspector
 	result := resultItem(body)
-
-	uc := models.ResolveUserContext("Workspaces")
-	if w, err = models.ResolveWorkspace(uc, result["Workspace"].(string), "Repositories"); err != nil {
-		return
-	}
-	if r, err = models.ResolveRepository(w, result["URI"].(string)); err != nil {
-		return
-	}
 
 	// Stream clone output
 	app.Printf("Clone %s\n", result["URL"])
@@ -70,13 +68,22 @@ func addRepositoryViewer(body map[string]any) (output string, err error) {
 	}
 
 	// If clone is successful, show repository contents using GitRepo inspection
+	uc := models.ResolveUserContext("Workspaces")
+	if w, err = models.ResolveWorkspace(uc, result["Workspace"].(string), "Repositories"); err != nil {
+		return
+	}
+	if r, err = models.ResolveRepository(w, result["URI"].(string)); err != nil {
+		return
+	}
 	if err = r.Load("Shapers", "Framers"); err != nil {
 		return
 	}
 
 	// Convert GitRepoInspector to map for use in view
-	result["GitRepo"] = utils.Map(r.GitRepo.Inspect())
-	body["Result"] = result
+	if gri, err = r.GitRepo.Inspect(); err != nil {
+		return
+	}
+	result["GitRepo"] = utils.Map(gri)
 	output, err = cliapp.View(
 		"repositories/create",
 		"gitrepos/gitrepo",

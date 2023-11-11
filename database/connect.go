@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sf/app"
 	"sf/utils"
 
 	"github.com/glebarez/sqlite"
@@ -34,10 +35,19 @@ func fileLogger() (fLog logger.Interface) {
 	if err != nil {
 		panic(err)
 	}
-	fLog = logger.New(log.New(file, "\r\n", log.LstdFlags), logger.Config{
-		LogLevel:             logger.Warn,
-		ParameterizedQueries: true, // Don't include params
-	})
+	var config logger.Config
+	if app.Debug {
+		config = logger.Config{
+			LogLevel:             logger.Info,
+			ParameterizedQueries: false,
+		}
+	} else {
+		config = logger.Config{
+			LogLevel:             logger.Error,
+			ParameterizedQueries: true,
+		}
+	}
+	fLog = logger.New(log.New(file, "\r\n", log.LstdFlags), config)
 	return
 }
 

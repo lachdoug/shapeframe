@@ -10,12 +10,13 @@ import (
 )
 
 type ShapeLoader struct {
-	Shape         *Shape
-	Loads         []string
-	Shaper        bool
-	Configuration bool
-	FrameLoads    []string
-	Preloads      []string
+	Shape              *Shape
+	Loads              []string
+	Shaper             bool
+	Configuration      bool
+	ConfigurationLoads []string
+	FrameLoads         []string
+	Preloads           []string
 }
 
 func NewShapeLoader(s *Shape, loads []string) (sl *ShapeLoader) {
@@ -40,6 +41,7 @@ func (sl *ShapeLoader) dependencies() {
 	if slices.Contains(sl.Loads, "Configuration") {
 		sl.Loads = append(sl.Loads,
 			"Shaper",
+			"Configuration.Form",
 		)
 	}
 	if slices.Contains(sl.Loads, "Shaper") {
@@ -58,6 +60,9 @@ func (sl *ShapeLoader) settle() {
 			sl.Shaper = true
 		case "Configuration":
 			sl.Configuration = true
+			if len(elem) > 1 {
+				sl.ConfigurationLoads = append(sl.ConfigurationLoads, elem[1])
+			}
 		case "Frame":
 			sl.Preloads = append(sl.Preloads, "Frame")
 			if len(elem) > 1 {
@@ -67,6 +72,7 @@ func (sl *ShapeLoader) settle() {
 			sl.Preloads = append(sl.Preloads, load)
 		}
 	}
+	utils.UniqStrings(&sl.Preloads)
 }
 
 func (sl *ShapeLoader) query() {
@@ -89,11 +95,25 @@ func (sl *ShapeLoader) assign() (err error) {
 			return
 		}
 	}
+	if len(sl.ConfigurationLoads) > 0 {
+		if err = sl.LoadConfiguration(); err != nil {
+			return
+		}
+	}
 	return
 }
 
-func (sl *ShapeLoader) LoadFrame() (err error) {
-	err = sl.Shape.Frame.Load(sl.FrameLoads...)
+func (sl *ShapeLoader) SetConfiguration() (err error) {
+	c := &Configuration{
+		OwnerID:   sl.Shape.ID,
+		OwnerType: "Shape",
+	}
+	queries.Lookup(c)
+	if c.ID == 0 {
+		c = NewConfiguration(sl.Shape)
+	}
+	c.Owner = sl.Shape
+	sl.Shape.Configuration = c
 	return
 }
 
@@ -111,12 +131,12 @@ func (sl *ShapeLoader) SetShaper() (err error) {
 	return
 }
 
-func (sl *ShapeLoader) SetConfiguration() (err error) {
-	schema := sl.Shape.Shaper.ConfigurationFormSchema()
-	if err = schema.Validate(); err != nil {
-		return
-	}
-	settings := sl.Shape.ConfigurationSettings()
-	sl.Shape.Configuration = NewForm("frame", sl.Shape.Name, schema, settings)
+func (sl *ShapeLoader) LoadFrame() (err error) {
+	err = sl.Shape.Frame.Load(sl.FrameLoads...)
+	return
+}
+
+func (sl *ShapeLoader) LoadConfiguration() (err error) {
+	err = sl.Shape.Configuration.Load(sl.ConfigurationLoads...)
 	return
 }

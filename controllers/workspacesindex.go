@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"sf/app"
 	"sf/models"
 )
 
@@ -11,7 +10,7 @@ type WorkspacesIndexItemResult struct {
 	IsContext bool
 }
 
-func WorkspacesIndex(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func WorkspacesIndex(jparams []byte) (jbody []byte, err error) {
 	var ws []*models.Workspace
 
 	uc := models.ResolveUserContext(

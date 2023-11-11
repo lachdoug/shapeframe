@@ -34,7 +34,7 @@ func (fs *FormSchema) findProperty(key string) (property map[string]any) {
 	return
 }
 
-func (fs *FormSchema) Validate() (err error) {
+func (fs *FormSchema) Validation() (err error) {
 	msgs := []string{}
 	var assertionOk bool
 	for _, property := range fs.Properties {

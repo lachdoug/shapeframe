@@ -2,15 +2,16 @@ package models
 
 import (
 	"sf/app"
+	"sf/utils"
 )
 
 type Orchestration struct {
 	Frame       *Frame
-	Stream      *Stream
+	Stream      *utils.Stream
 	Deployments []*Deployment
 }
 
-func NewOrchestration(f *Frame, st *Stream) (o *Orchestration) {
+func NewOrchestration(f *Frame, st *utils.Stream) (o *Orchestration) {
 	o = &Orchestration{
 		Frame:  f,
 		Stream: st,
@@ -25,7 +26,7 @@ func (o *Orchestration) apply() {
 	o.SetDeployments()
 	o.write("Orchestrating %s\n", o.Frame.Name)
 	o.write("Configuration:\n")
-	for _, setting := range o.Frame.Configuration.SettingsDetail() {
+	for _, setting := range o.Frame.Configuration.Details() {
 		o.write("  %s: %s\n", setting["Key"], setting["Value"])
 	}
 

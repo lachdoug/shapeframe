@@ -21,28 +21,8 @@ func NewGitRepoLoader(g *GitRepo, loads []string) (gl *GitRepoLoader) {
 }
 
 func (gl *GitRepoLoader) load() (err error) {
-	gl.attributes()
 	err = gl.associations()
 	return
-}
-
-func (gl *GitRepoLoader) attributes() {
-	var err error
-	var uri, url, branch string
-	if utils.IsGitRepoDir(gl.GitRepo.Path) {
-		if uri, err = utils.GitRepoURI(gl.GitRepo.Path); err != nil {
-			uri = ""
-		}
-		if url, err = utils.GitRepoURL(gl.GitRepo.Path); err != nil {
-			url = ""
-		}
-		if branch, err = utils.GitRepoBranch(gl.GitRepo.Path); err != nil {
-			branch = ""
-		}
-		gl.GitRepo.URI = uri
-		gl.GitRepo.URL = url
-		gl.GitRepo.Branch = branch
-	}
 }
 
 func (gl *GitRepoLoader) associations() (err error) {

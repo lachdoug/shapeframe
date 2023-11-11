@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
 	"sf/models"
@@ -42,7 +41,7 @@ func configureShape() (command any) {
 	return
 }
 
-func configureShapeParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func configureShapeParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
 	var f *models.Frame
 	var s *models.Shape
@@ -68,27 +67,23 @@ func configureShapeParams(context *cliapp.Context) (jparams []byte, vn *app.Vali
 	}
 
 	var settings map[string]any
-	c := s.Configuration
+	fm := s.Configuration.Form
 	if len(values) == 0 {
-		form := &Form{Model: c}
+		form := &Form{Model: fm}
 		if settings, err = form.prompts(); err != nil {
 			return
 		}
 	} else {
-		if settings, err = c.SettingsForValues(values); err != nil {
+		if settings, err = fm.SettingsForValues(values); err != nil {
 			return
 		}
-	}
-
-	update := map[string]any{
-		"Configuration": settings,
 	}
 
 	jparams = jsonParams(map[string]any{
 		"Workspace": w.Name,
 		"Frame":     f.Name,
 		"Shape":     s.Name,
-		"Update":    update,
+		"Update":    settings,
 	})
 	return
 }

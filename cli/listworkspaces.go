@@ -19,7 +19,7 @@ func listWorkspaces() (command any) {
 	return
 }
 
-func listWorkspacesViewer(body map[string]any) (output string, er error) {
+func listWorkspacesViewer(body map[string]any) (output string, err error) {
 	table := &Table{
 		Items:  resultItems(body),
 		Titles: ss("WORKSPACE", "ABOUT"),
@@ -33,5 +33,6 @@ func listWorkspacesViewer(body map[string]any) (output string, er error) {
 			tableCellNoAccentFn,
 		),
 	}
-	return cliapp.View("workspaces/index")(table.generate())
+	output, err = cliapp.View("workspaces/index")(table.generate())
+	return
 }

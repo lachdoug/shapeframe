@@ -33,6 +33,12 @@ func appError(msg string) error {
 }
 
 func ErrorHandler(err error) {
+	if err == nil {
+		panic("err should not be nil")
+	}
+	if AppError == nil {
+		panic(fmt.Sprintf("AppErr should not be nil for err %s", err))
+	}
 	if errors.Is(err, AppError) {
 		PrintfErr("Error: %s\n", err)
 		if Debug {

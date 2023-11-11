@@ -32,7 +32,7 @@ func pull() (command any) {
 	return
 }
 
-func pullParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func pullParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
 	workspace := context.StringFlag("workspace")
 	uri := context.Argument(0)
@@ -64,8 +64,8 @@ func pullPrompt(w *models.Workspace) (uri string, err error) {
 	list := ""
 	uris := []string{}
 	for i, r := range rs {
-		uris = append(uris, r.GitRepo.URI)
-		list = list + fmt.Sprintf("%d. %s\n", i+1, r.GitRepo.URI)
+		uris = append(uris, r.URI)
+		list = list + fmt.Sprintf("%d. %s\n", i+1, r.URI)
 	}
 	app.Printf(list)
 	s, err := prompt("Which repository?")
@@ -83,8 +83,8 @@ func pullPrompt(w *models.Workspace) (uri string, err error) {
 }
 
 func pullViewer(body map[string]any) (output string, err error) {
-	r := resultItem(body)
-	app.Printf("Pull %s\n", r["URL"])
+	result := resultItem(body)
+	app.Printf("Pull %s\n", result["URL"])
 	if err = stream(body); err != nil {
 		return
 	}

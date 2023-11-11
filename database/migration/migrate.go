@@ -7,11 +7,12 @@ import (
 
 func Migrate() {
 	if err := database.DB.AutoMigrate(
-		&models.Shape{},
-		&models.Frame{},
-		&models.Workspace{},
-		&models.Directory{},
 		&models.UserContext{},
+		&models.Workspace{},
+		&models.Frame{},
+		&models.Shape{},
+		&models.Directory{},
+		&models.Configuration{},
 	); err != nil {
 		panic(err)
 	}

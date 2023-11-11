@@ -1,9 +1,8 @@
 package controllers
 
 import (
-	"net/url"
-	"sf/app"
 	"sf/models"
+	"sf/utils"
 )
 
 type RepositoryPullsCreateParams struct {
@@ -17,25 +16,12 @@ type RepositoryPullsCreateResult struct {
 	Workspace string
 }
 
-func RepositoryPullsCreate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func RepositoryPullsCreate(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
 	var r *models.Repository
-	params := paramsFor[RepositoryPullsCreateParams](jparams)
-	st := models.StreamCreate()
-
-	vn = &app.Validation{}
-	if params.Workspace == "" {
-		vn.Add("Workspace", "must not be blank")
-	}
-	if params.URI == "" {
-		vn.Add("URI", "must not be blank")
-	}
-	if _, err = url.Parse("https://" + params.URI); err != nil {
-		vn.Add("URI", "must be valid URI")
-	}
-	if vn.IsInvalid() {
-		return
-	}
+	var url string
+	params := ParamsFor[RepositoryPullsCreateParams](jparams)
+	st := utils.StreamCreate()
 
 	uc := models.ResolveUserContext("Workspaces")
 	if w, err = models.ResolveWorkspace(uc, params.Workspace, "Repositories"); err != nil {
@@ -46,12 +32,15 @@ func RepositoryPullsCreate(jparams []byte) (jbody []byte, vn *app.Validation, er
 	}
 	r.Update(st)
 
+	if url, err = r.GitRepo.URL(); err != nil {
+		return
+	}
 	result := &RepositoryPullsCreateResult{
 		URI:       params.URI,
-		URL:       r.GitRepo.URL,
+		URL:       url,
 		Workspace: r.Workspace.Name,
 	}
 
-	jbody = jbodyFor(result, st)
+	jbody = jbodyFor(result, nil, st)
 	return
 }

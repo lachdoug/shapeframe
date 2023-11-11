@@ -1,6 +1,7 @@
 package app
 
 type Body struct {
-	Result any
-	Stream string
+	Result  any
+	Invalid map[string]string
+	Stream  string
 }

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
 	"sf/models"
@@ -31,7 +30,7 @@ func listShapes() (command any) {
 	return
 }
 
-func listShapesParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func listShapesParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
 	all := context.BoolFlag("all")
 	workspace := context.StringFlag("workspace")
@@ -52,7 +51,7 @@ func listShapesParams(context *cliapp.Context) (jparams []byte, vn *app.Validati
 	return
 }
 
-func listShapesViewer(body map[string]any) (output string, er error) {
+func listShapesViewer(body map[string]any) (output string, err error) {
 	table := &Table{
 		Items:  resultItems(body),
 		Titles: ss("SHAPE", "FRAME", "WORKSPACE", "SHAPER", "ABOUT"),
@@ -72,5 +71,6 @@ func listShapesViewer(body map[string]any) (output string, er error) {
 			tableCellNoAccentFn,
 		),
 	}
-	return cliapp.View("shapes/index")(table.generate())
+	output, err = cliapp.View("shapes/index")(table.generate())
+	return
 }

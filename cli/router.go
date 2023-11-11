@@ -13,6 +13,7 @@ func Router(args []string) {
 			"  Invoke running systems",
 		),
 		Commands: cs(
+			get,
 			list,
 			label,
 			configure,
@@ -20,8 +21,7 @@ func Router(args []string) {
 			add,
 			remove,
 			pull,
-			enter,
-			exit,
+			join,
 			context,
 			orchestrate,
 			nuke,

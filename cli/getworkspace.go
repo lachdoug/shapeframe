@@ -1,13 +1,12 @@
 package cli
 
 import (
-	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
 	"sf/models"
 )
 
-func inspectWorkspace() (command any) {
+func getWorkspace() (command any) {
 	command = &cliapp.Command{
 		Name:    "inspect",
 		Summary: "Inspect workspace",
@@ -17,31 +16,19 @@ func inspectWorkspace() (command any) {
 			"Provide an optional workspace name as an argument",
 			"  Uses workspace context when not provided",
 		),
-		Parametizer: inspectWorkspaceParams,
+		Parametizer: getWorkspaceParams,
 		Controller:  controllers.WorkspacesRead,
 		Viewer: cliapp.View(
 			"workspaces/read",
-			"workspaces/frame",
 			"workspaces/frames",
-			"workspaces/shape",
-			"workspaces/shapes",
 			"workspaces/repositories",
-			"workspaces/repository",
 			"workspaces/directories",
-			"workspaces/directory",
-			"configurations/configuration",
-			"configurations/setting",
-			"gitrepos/gitrepo",
-			"gitrepos/framer",
-			"gitrepos/framers",
-			"gitrepos/shaper",
-			"gitrepos/shapers",
 		),
 	}
 	return
 }
 
-func inspectWorkspaceParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func getWorkspaceParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
 	workspace := context.Argument(0)
 

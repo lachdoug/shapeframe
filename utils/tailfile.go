@@ -5,13 +5,10 @@ import (
 	"bytes"
 	"io"
 	"os"
-	"path/filepath"
 	"time"
 )
 
-func StreamTail(dirPath string, ch chan []byte) {
-	filePath := filepath.Join(dirPath, "out")
-
+func TailFile(filePath string, ch chan []byte) {
 	f, err := os.Open(filePath)
 	checkErr(err)
 

@@ -15,10 +15,6 @@ type UserContext struct {
 	Frame       *Frame     `gorm:"foreignkey:FrameID"`
 	Shape       *Shape     `gorm:"foreignkey:ShapeID"`
 	Workspaces  []*Workspace
-	// Frames      []*Frame  `gorm:"-"`
-	// Shapes      []*Shape  `gorm:"-"`
-	// Framers     []*Framer `gorm:"-"`
-	// Shapers     []*Shaper `gorm:"-"`
 }
 
 type UserContextChange struct {
@@ -55,7 +51,7 @@ func (uc *UserContext) Load(preloads ...string) {
 }
 
 func (uc *UserContext) Save() {
-	queries.Update(uc)
+	queries.Save(uc)
 }
 
 func (uc *UserContext) Clear(assocName string) {

@@ -16,8 +16,8 @@ type Workspace struct {
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	DeletedAt     soft_delete.DeletedAt `gorm:"softDelete:nano;index:idx_nondeleted_usercontext_workspace,unique"`
-	UserContext   *UserContext          `gorm:"foreignkey:UserContextID"`
 	UserContextID uint                  `gorm:"index:idx_nondeleted_usercontext_workspace,unique"`
+	UserContext   *UserContext          `gorm:"foreignkey:UserContextID"`
 	Name          string                `gorm:"index:idx_nondeleted_usercontext_workspace,unique"`
 	About         string
 	Frames        []*Frame
@@ -25,6 +25,14 @@ type Workspace struct {
 	Repositories  []*Repository `gorm:"-"`
 	Framers       []*Framer     `gorm:"-"`
 	Shapers       []*Shaper     `gorm:"-"`
+}
+
+type WorkspaceReader struct {
+	Name         string
+	About        string
+	Frames       []string
+	Repositories []string
+	Directories  []string
 }
 
 type WorkspaceInspector struct {
@@ -45,14 +53,16 @@ func NewWorkspace(uc *UserContext, name string) (w *Workspace) {
 	return
 }
 
-func CreateWorkspace(uc *UserContext, name string, about string) (w *Workspace, err error) {
+func CreateWorkspace(uc *UserContext, name string, about string) (w *Workspace, vn *app.Validation, err error) {
 	w = NewWorkspace(uc, name)
 	w.About = about
 	if w.IsExists() {
 		err = app.Error("workspace %s already exists", w.Name)
 		return
 	}
-	w.Create()
+	if vn = w.Validation(); vn.IsValid() {
+		w.Save()
+	}
 	return
 }
 
@@ -86,12 +96,34 @@ func ResolveWorkspace(uc *UserContext, name string, loads ...string) (w *Workspa
 	return
 }
 
+// Read
+
+func (w *Workspace) Read() (wi *WorkspaceReader) {
+	wi = &WorkspaceReader{
+		Name:         w.Name,
+		About:        w.About,
+		Frames:       w.FrameNames(),
+		Repositories: w.RepositoryUris(),
+		Directories:  w.DirectoryPaths(),
+	}
+	return
+}
+
 // Inspection
 
-func (w *Workspace) Inspect() (wi *WorkspaceInspector) {
-	ris := w.RepositoriesInspect()
-	dis := w.DirectoriesInspect()
-	fis := w.FramesInspect()
+func (w *Workspace) Inspect() (wi *WorkspaceInspector, err error) {
+	var fis []*FrameInspector
+	var ris []*RepositoryInspector
+	var dis []*DirectoryInspector
+	if ris, err = w.RepositoriesInspect(); err != nil {
+		return
+	}
+	if dis, err = w.DirectoriesInspect(); err != nil {
+		return
+	}
+	if fis, err = w.FramesInspect(); err != nil {
+		return
+	}
 	wi = &WorkspaceInspector{
 		Name:         w.Name,
 		About:        w.About,
@@ -102,28 +134,37 @@ func (w *Workspace) Inspect() (wi *WorkspaceInspector) {
 	return
 }
 
-func (w *Workspace) FramesInspect() (fis []*FrameInspector) {
+func (w *Workspace) FramesInspect() (fis []*FrameInspector, err error) {
+	var fi *FrameInspector
 	fis = []*FrameInspector{}
 	for _, f := range w.Frames {
-		fi := f.Inspect()
+		if fi, err = f.Inspect(); err != nil {
+			return
+		}
 		fis = append(fis, fi)
 	}
 	return
 }
 
-func (w *Workspace) RepositoriesInspect() (ris []*RepositoryInspector) {
+func (w *Workspace) RepositoriesInspect() (ris []*RepositoryInspector, err error) {
 	ris = []*RepositoryInspector{}
 	for _, r := range w.Repositories {
-		ri := r.Inspect()
+		var ri *RepositoryInspector
+		if ri, err = r.Inspect(); err != nil {
+			return
+		}
 		ris = append(ris, ri)
 	}
 	return
 }
 
-func (w *Workspace) DirectoriesInspect() (dis []*DirectoryInspector) {
+func (w *Workspace) DirectoriesInspect() (dis []*DirectoryInspector, err error) {
 	dis = []*DirectoryInspector{}
 	for _, d := range w.Directories {
-		di := d.Inspect()
+		var di *DirectoryInspector
+		if di, err = d.Inspect(); err != nil {
+			return
+		}
 		dis = append(dis, di)
 	}
 	return
@@ -131,16 +172,16 @@ func (w *Workspace) DirectoriesInspect() (dis []*DirectoryInspector) {
 
 // Data
 
+func (w *Workspace) directory() (dirPath string) {
+	dirPath = utils.DataDir(filepath.Join("workspaces", w.Name))
+	return
+}
+
 func (w *Workspace) IsExists() (is bool) {
 	if w.UserContext.FindWorkspace(w.Name) != nil {
 		is = true
 		return
 	}
-	return
-}
-
-func (w *Workspace) directory() (dirPath string) {
-	dirPath = utils.DataDir(filepath.Join("workspaces", w.Name))
 	return
 }
 
@@ -159,12 +200,19 @@ func (w *Workspace) Assign(params map[string]any) {
 	}
 }
 
-func (w *Workspace) Create() {
-	queries.Create(w)
+func (w *Workspace) Validation() (vn *app.Validation) {
+	vn = &app.Validation{}
+	if w.Name == "" {
+		vn.Add("Name", "must not be blank")
+	}
+	if !utils.IsValidName(w.Name) {
+		vn.Add("Name", "must contain word characters, digits, hyphens and underscores only")
+	}
+	return
 }
 
 func (w *Workspace) Save() {
-	queries.Update(w)
+	queries.Save(w)
 }
 
 func (w *Workspace) Destroy() {
@@ -191,9 +239,9 @@ func (w *Workspace) FindDirectory(path string) (d *Directory) {
 	return
 }
 
-func (w *Workspace) FindRepository(path string) (r *Repository) {
+func (w *Workspace) FindRepository(uri string) (r *Repository) {
 	for _, r = range w.Repositories {
-		if r.Path == path {
+		if r.URI == uri {
 			return
 		}
 	}
@@ -228,5 +276,29 @@ func (w *Workspace) FindShaper(name string) (sr *Shaper) {
 		}
 	}
 	sr = nil
+	return
+}
+
+func (w *Workspace) FrameNames() (ns []string) {
+	ns = []string{}
+	for _, f := range w.Frames {
+		ns = append(ns, f.Name)
+	}
+	return
+}
+
+func (w *Workspace) DirectoryPaths() (ps []string) {
+	ps = []string{}
+	for _, d := range w.Directories {
+		ps = append(ps, d.Path)
+	}
+	return
+}
+
+func (w *Workspace) RepositoryUris() (us []string) {
+	us = []string{}
+	for _, r := range w.Repositories {
+		us = append(us, r.URI)
+	}
 	return
 }

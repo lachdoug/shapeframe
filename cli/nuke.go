@@ -2,7 +2,6 @@ package cli
 
 import (
 	"os"
-	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
 	"strings"
@@ -28,7 +27,7 @@ func nuke() (command any) {
 	return
 }
 
-func nukeParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func nukeParams(context *cliapp.Context) (jparams []byte, err error) {
 	if !context.BoolFlag("confirm") {
 		err = nukePrompt()
 	}

@@ -59,6 +59,7 @@ func (dl *DirectoryLoader) settle() {
 			dl.Preloads = append(dl.Preloads, load)
 		}
 	}
+	utils.UniqStrings(&dl.Preloads)
 }
 
 func (dl *DirectoryLoader) query() {

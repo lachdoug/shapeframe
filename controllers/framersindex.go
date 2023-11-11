@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"sf/app"
 	"sf/models"
 )
 
@@ -15,9 +14,9 @@ type FramersIndexItemResult struct {
 	About     string
 }
 
-func FramersIndex(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func FramersIndex(jparams []byte) (jbody []byte, err error) {
 	var frs []*models.Framer
-	params := paramsFor[FramersIndexParams](jparams)
+	params := ParamsFor[FramersIndexParams](jparams)
 
 	uc := models.ResolveUserContext(
 		"Workspace",

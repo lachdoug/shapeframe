@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
 	"sf/models"
@@ -21,8 +20,8 @@ func orchestrate() (command any) {
 			"  Uses frame context when not provided",
 		),
 		Flags: ss(
-			"string", "workspace", "Workspace name",
 			"string", "frame", "Frame name",
+			"string", "workspace", "Workspace name",
 		),
 		Parametizer: orchestrateParams,
 		Controller:  controllers.FrameOrchestrationsCreate,
@@ -31,7 +30,7 @@ func orchestrate() (command any) {
 	return
 }
 
-func orchestrateParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func orchestrateParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
 	var f *models.Frame
 	workspace := context.StringFlag("workspace")

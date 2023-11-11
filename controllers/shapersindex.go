@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"sf/app"
 	"sf/models"
 )
 
@@ -15,9 +14,9 @@ type ShapersIndexItemResult struct {
 	About     string
 }
 
-func ShapersIndex(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func ShapersIndex(jparams []byte) (jbody []byte, err error) {
 	var srs []*models.Shaper
-	params := paramsFor[ShapersIndexParams](jparams)
+	params := ParamsFor[ShapersIndexParams](jparams)
 
 	uc := models.ResolveUserContext(
 		"Workspace",

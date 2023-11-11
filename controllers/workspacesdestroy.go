@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"sf/app"
 	"sf/models"
 )
 
@@ -13,17 +12,9 @@ type WorkspacesDestroyResult struct {
 	Workspace string
 }
 
-func WorkspacesDestroy(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func WorkspacesDestroy(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
-	params := paramsFor[WorkspacesDestroyParams](jparams)
-
-	vn = &app.Validation{}
-	if params.Workspace == "" {
-		vn.Add("Workspace", "must not be blank")
-	}
-	if vn.IsInvalid() {
-		return
-	}
+	params := ParamsFor[WorkspacesDestroyParams](jparams)
 
 	uc := models.ResolveUserContext(
 		"Workspace", "Frame", "Shape",

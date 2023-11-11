@@ -6,34 +6,28 @@ import (
 )
 
 type Form struct {
-	Kind     string
-	Name     string
 	Schema   *FormSchema
 	Settings map[string]any
 }
 
 func NewForm(
-	kind string,
-	name string,
 	schema *FormSchema,
 	settings map[string]any) (c *Form) {
 	c = &Form{
-		Kind:     kind,
-		Name:     name,
 		Schema:   schema,
 		Settings: settings,
 	}
 	return
 }
 
-func (c *Form) SettingsDetail() (settings []map[string]any) {
-	settings = []map[string]any{}
+func (c *Form) Details() (details []map[string]any) {
+	details = []map[string]any{}
 	if c.Settings == nil {
 		return
 	}
 	for _, property := range c.Schema.Properties {
 		key := property["key"].(string)
-		settings = append(settings, map[string]any{
+		details = append(details, map[string]any{
 			"Label": c.LabelWithDetail(key),
 			"Key":   key,
 			"Value": c.Value(key),
@@ -124,7 +118,7 @@ func (c *Form) SettingsForValues(values []string) (settings map[string]any, err 
 	return
 }
 
-func (c *Form) Validate() (vn *app.Validation) {
+func (c *Form) Validation() (vn *app.Validation) {
 	vn = &app.Validation{}
 	for _, property := range c.Schema.Properties {
 		key := property["key"].(string)
@@ -136,11 +130,6 @@ func (c *Form) Validate() (vn *app.Validation) {
 		if required && value == "" {
 			vn.Add(key, "must not be blank")
 		}
-	}
-	if vn.IsInvalid() {
-		return
-	} else {
-		vn = nil
 	}
 	return
 }

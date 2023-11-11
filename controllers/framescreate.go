@@ -17,27 +17,17 @@ type FramesCreateResult struct {
 	Frame     string
 }
 
-func FramesCreate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func FramesCreate(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
 	var f *models.Frame
-	params := paramsFor[FramesCreateParams](jparams)
-
-	vn = &app.Validation{}
-	if params.Workspace == "" {
-		vn.Add("Workspace", "must not be blank")
-	}
-	if params.Framer == "" {
-		vn.Add("Framer", "must not be blank")
-	}
-	if vn.IsInvalid() {
-		return
-	}
+	var vn *app.Validation
+	params := ParamsFor[FramesCreateParams](jparams)
 
 	uc := models.ResolveUserContext("Workspaces.Frames")
 	if w, err = models.ResolveWorkspace(uc, params.Workspace, "Framers"); err != nil {
 		return
 	}
-	if f, err = models.CreateFrame(w, params.Framer, params.Name, params.About); err != nil {
+	if f, vn, err = models.CreateFrame(w, params.Framer, params.Name, params.About); err != nil {
 		return
 	}
 
@@ -46,6 +36,6 @@ func FramesCreate(jparams []byte) (jbody []byte, vn *app.Validation, err error) 
 		Frame:     f.Name,
 	}
 
-	jbody = jbodyFor(result)
+	jbody = jbodyFor(result, vn)
 	return
 }

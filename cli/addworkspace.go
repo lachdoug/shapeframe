@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
 )
@@ -26,7 +25,7 @@ func addWorkspace() (command any) {
 	return
 }
 
-func addWorkspaceParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func addWorkspaceParams(context *cliapp.Context) (jparams []byte, err error) {
 	name := context.Argument(0)
 	about := context.StringFlag("about")
 

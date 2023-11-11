@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"sf/app"
 	"sf/models"
 )
 
@@ -21,17 +20,9 @@ type WorkspacesUpdateResultDetails struct {
 	About string
 }
 
-func WorkspacesUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func WorkspacesUpdate(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
-	params := paramsFor[WorkspacesUpdateParams](jparams)
-
-	vn = &app.Validation{}
-	if params.Workspace == "" {
-		vn.Add("Workspace", "must not be blank")
-	}
-	if vn.IsInvalid() {
-		return
-	}
+	params := ParamsFor[WorkspacesUpdateParams](jparams)
 
 	uc := models.ResolveUserContext("Workspaces")
 	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {

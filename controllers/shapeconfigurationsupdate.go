@@ -19,25 +19,12 @@ type ShapeConfigurationsUpdateResult struct {
 	Configuration []map[string]any
 }
 
-func ShapeConfigurationsUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func ShapeConfigurationsUpdate(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
 	var f *models.Frame
 	var s *models.Shape
-	params := paramsFor[ShapeConfigurationsUpdateParams](jparams)
-
-	vn = &app.Validation{}
-	if params.Workspace == "" {
-		vn.Add("Workspace", "must not be blank")
-	}
-	if params.Frame == "" {
-		vn.Add("Frame", "must not be blank")
-	}
-	if params.Shape == "" {
-		vn.Add("Shape", "must not be blank")
-	}
-	if vn.IsInvalid() {
-		return
-	}
+	var vn *app.Validation
+	params := ParamsFor[ShapeConfigurationsUpdateParams](jparams)
 
 	uc := models.ResolveUserContext("Workspaces.Frames.Shapes")
 	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
@@ -55,24 +42,18 @@ func ShapeConfigurationsUpdate(jparams []byte) (jbody []byte, vn *app.Validation
 		Frame:     f.Name,
 		Shape:     s.Name,
 		From: &ShapesUpdateResultDetails{
-			Configuration: s.Configuration.SettingsDetail(),
+			Configuration: s.Configuration.Details(),
 		},
 	}
 
-	s.Assign(params.Update)
-	s.Save()
-
-	if err = s.Load("Configuration"); err != nil {
-		return
-	}
-	if vn = s.Configuration.Validate(); vn != nil {
+	if vn, err = s.Configuration.Update(params.Update); err != nil {
 		return
 	}
 
 	result.To = &ShapesUpdateResultDetails{
-		Configuration: s.Configuration.SettingsDetail(),
+		Configuration: s.Configuration.Details(),
 	}
 
-	jbody = jbodyFor(result)
+	jbody = jbodyFor(result, vn)
 	return
 }

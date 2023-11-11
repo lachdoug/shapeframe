@@ -19,25 +19,12 @@ type ShapesCreateResult struct {
 	Shape     string
 }
 
-func ShapesCreate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func ShapesCreate(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
 	var f *models.Frame
 	var s *models.Shape
-	params := paramsFor[ShapesCreateParams](jparams)
-
-	vn = &app.Validation{}
-	if params.Workspace == "" {
-		vn.Add("Workspace", "must not be blank")
-	}
-	if params.Frame == "" {
-		vn.Add("Frame", "must not be blank")
-	}
-	if params.Shaper == "" {
-		vn.Add("Shaper", "must not be blank")
-	}
-	if vn.IsInvalid() {
-		return
-	}
+	var vn *app.Validation
+	params := ParamsFor[ShapesCreateParams](jparams)
 
 	uc := models.ResolveUserContext(
 		"Workspace.Frames.Shapes",
@@ -49,7 +36,7 @@ func ShapesCreate(jparams []byte) (jbody []byte, vn *app.Validation, err error) 
 	if f, err = models.ResolveFrame(uc, w, params.Frame); err != nil {
 		return
 	}
-	if s, err = models.CreateShape(f, params.Shaper, params.Name, params.About); err != nil {
+	if s, vn, err = models.CreateShape(f, params.Shaper, params.Name, params.About); err != nil {
 		return
 	}
 
@@ -59,6 +46,6 @@ func ShapesCreate(jparams []byte) (jbody []byte, vn *app.Validation, err error) 
 		Shape:     s.Name,
 	}
 
-	jbody = jbodyFor(result)
+	jbody = jbodyFor(result, vn)
 	return
 }

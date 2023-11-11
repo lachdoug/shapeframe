@@ -17,21 +17,11 @@ type FrameConfigurationsUpdateResult struct {
 	Configuration []map[string]any
 }
 
-func FrameConfigurationsUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func FrameConfigurationsUpdate(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
 	var f *models.Frame
-	params := paramsFor[FrameConfigurationsUpdateParams](jparams)
-
-	vn = &app.Validation{}
-	if params.Workspace == "" {
-		vn.Add("Workspace", "must not be blank")
-	}
-	if params.Frame == "" {
-		vn.Add("Frame", "must not be blank")
-	}
-	if vn.IsInvalid() {
-		return
-	}
+	var vn *app.Validation
+	params := ParamsFor[FrameConfigurationsUpdateParams](jparams)
 
 	uc := models.ResolveUserContext("Workspaces.Frames")
 	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
@@ -45,24 +35,18 @@ func FrameConfigurationsUpdate(jparams []byte) (jbody []byte, vn *app.Validation
 		Workspace: w.Name,
 		Frame:     f.Name,
 		From: &FramesUpdateResultDetails{
-			Configuration: f.Configuration.SettingsDetail(),
+			Configuration: f.Configuration.Details(),
 		},
 	}
 
-	f.Assign(params.Update)
-	f.Save()
-
-	if err = f.Load("Configuration"); err != nil {
-		return
-	}
-	if vn = f.Configuration.Validate(); vn != nil {
+	if vn, err = f.Configuration.Update(params.Update); err != nil {
 		return
 	}
 
 	result.To = &FramesUpdateResultDetails{
-		Configuration: f.Configuration.SettingsDetail(),
+		Configuration: f.Configuration.Details(),
 	}
 
-	jbody = jbodyFor(result)
+	jbody = jbodyFor(result, vn)
 	return
 }

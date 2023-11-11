@@ -1,9 +1,5 @@
 package app
 
-import (
-	"fmt"
-)
-
 type Validation struct {
 	Failures []*InvalidField
 }
@@ -24,9 +20,18 @@ func (v *Validation) IsInvalid() (is bool) {
 	return
 }
 
-func (v *Validation) Error() (s string) {
+func (v *Validation) IsValid() (is bool) {
+	is = !v.IsInvalid()
+	return
+}
+
+func (v *Validation) Map() (m map[string]string) {
+	if v.IsValid() {
+		return
+	}
+	m = map[string]string{}
 	for _, f := range v.Failures {
-		s = s + fmt.Sprintf("\n  - %s %s", f.Key, f.Message)
+		m[f.Key] = f.Message
 	}
 	return
 }

@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"sf/app"
 	"sf/models"
 )
 
@@ -17,9 +16,9 @@ type FramesIndexItemResult struct {
 	IsContext bool
 }
 
-func FramesIndex(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func FramesIndex(jparams []byte) (jbody []byte, err error) {
 	var fs []*models.Frame
-	params := paramsFor[FramesIndexParams](jparams)
+	params := ParamsFor[FramesIndexParams](jparams)
 
 	uc := models.ResolveUserContext(
 		"Workspace.Frames.Workspace",

@@ -16,22 +16,12 @@ type DirectoriesCreateResult struct {
 	Path      string
 }
 
-func DirectoriesCreate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func DirectoriesCreate(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
 	var d *models.Directory
 	var path string
-	params := paramsFor[DirectoriesCreateParams](jparams)
-
-	vn = &app.Validation{}
-	if params.Workspace == "" {
-		vn.Add("Workspace", "must not be blank")
-	}
-	if params.Path == "" {
-		vn.Add("Path", "must not be blank")
-	}
-	if vn.IsInvalid() {
-		return
-	}
+	var vn *app.Validation
+	params := ParamsFor[DirectoriesCreateParams](jparams)
 
 	uc := models.ResolveUserContext(
 		"Workspaces.Directories",
@@ -42,7 +32,7 @@ func DirectoriesCreate(jparams []byte) (jbody []byte, vn *app.Validation, err er
 	if path, err = filepath.Abs(params.Path); err != nil {
 		return
 	}
-	if d, err = models.CreateDirectory(w, path); err != nil {
+	if d, vn, err = models.CreateDirectory(w, path); err != nil {
 		return
 	}
 
@@ -51,6 +41,6 @@ func DirectoriesCreate(jparams []byte) (jbody []byte, vn *app.Validation, err er
 		Path:      d.Path,
 	}
 
-	jbody = jbodyFor(result)
+	jbody = jbodyFor(result, vn)
 	return
 }

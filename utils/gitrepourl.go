@@ -12,7 +12,7 @@ func GitRepoURL(dirPath string) (url string, err error) {
 	var gr *git.Remote
 	var grc *config.RemoteConfig
 	if g, err = git.PlainOpen(dirPath); err != nil {
-		err = fmt.Errorf("git repo directory %s: %s", dirPath, err)
+		err = fmt.Errorf("git repo url open directory %s: %s", dirPath, err)
 		return
 	} else if gr, err = g.Remote("origin"); err != nil {
 		url = ""
@@ -21,7 +21,7 @@ func GitRepoURL(dirPath string) (url string, err error) {
 	grc = gr.Config()
 	url = grc.URLs[0]
 	if url == "" {
-		err = fmt.Errorf("git repo directory %s: no origin url", dirPath)
+		err = fmt.Errorf("git repo url origin directory %s", dirPath)
 	}
 	return
 }

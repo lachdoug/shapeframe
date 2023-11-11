@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
 	"sf/models"
@@ -28,7 +27,7 @@ func removeDirectory() (command any) {
 	return
 }
 
-func removeDirectoryParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func removeDirectoryParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
 	path := context.Argument(0)
 	workspace := context.StringFlag("workspace")

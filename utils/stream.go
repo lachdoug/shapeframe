@@ -1,9 +1,9 @@
-package models
+package utils
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
-	"sf/utils"
 	"strings"
 	"time"
 
@@ -12,6 +12,7 @@ import (
 
 type Stream struct {
 	Identifier string
+	File       string
 }
 
 type StreamMessage struct {
@@ -21,17 +22,28 @@ type StreamMessage struct {
 
 func StreamCreate() (s *Stream) {
 	s = &Stream{Identifier: uuid.New().String()}
-	utils.StreamMakeFile(s.directory())
+	s.setFile()
+	MakeFile(s.File)
 	return
 }
 
 func StreamLoad(identifier string) (s *Stream) {
 	s = &Stream{Identifier: identifier}
+	s.setFile()
 	return
 }
 
+func (s *Stream) setFile() {
+	s.File = s.file()
+}
+
 func (s *Stream) directory() (d string) {
-	d = utils.TempDir(filepath.Join("streams", s.Identifier))
+	d = TempDir(filepath.Join("streams", s.Identifier))
+	return
+}
+
+func (s *Stream) file() (f string) {
+	f = filepath.Join(s.directory(), "out")
 	return
 }
 
@@ -49,11 +61,24 @@ func (s *Stream) Error(err error) {
 }
 
 func (s *Stream) Close() {
-	utils.StreamAppend(s.directory(), []byte{4})
+	AppendFile(s.File, []byte{4})
 }
 
-func (s *Stream) Read(ch chan []byte) {
-	utils.StreamTail(s.directory(), ch)
+func (s *Stream) ReadOut(Out *os.File, Err *os.File) (err error) {
+	ch := make(chan []byte)
+	go TailFile(s.File, ch)
+	for b := range ch {
+		m := &StreamMessage{}
+		JsonUnmarshal(b, m)
+		if m.Type == "error" {
+			err = fmt.Errorf(m.Text)
+			return
+		}
+		if _, err = fmt.Fprint(Out, m.Text); err != nil {
+			panic(err)
+		}
+	}
+	return
 }
 
 func (s *Stream) TransmissionBlock(j []byte) (p []byte) {
@@ -92,6 +117,6 @@ func (s *Stream) save(kind string, text string) {
 		Type: kind,
 		Text: text,
 	}
-	j := utils.JsonMarshal(m)
-	utils.StreamAppend(s.directory(), s.TransmissionBlock(j))
+	j := JsonMarshal(m)
+	AppendFile(s.File, s.TransmissionBlock(j))
 }

@@ -52,6 +52,7 @@ func (fr *Framer) Inspect() (fri *FramerInspector) {
 func (fr *Framer) URI() (uri string, err error) {
 	var gruri string
 	if gruri, err = utils.GitRepoURI(fr.Path); err != nil {
+		err = app.ErrorWith(err, "framer URI")
 		return
 	}
 	uri = gruri + "#" + fr.Name
@@ -72,7 +73,7 @@ func (fr *Framer) Load() (err error) {
 
 // Configuration
 
-func (fr *Framer) ConfigurationFormSchema() (schema *FormSchema) {
+func (fr *Framer) configurationFormSchema() (schema *FormSchema) {
 	schema = NewFormSchema("framer", fr.Name, fr.Config)
 	return
 }

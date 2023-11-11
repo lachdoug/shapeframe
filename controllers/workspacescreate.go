@@ -14,20 +14,13 @@ type WorkspacesCreateResult struct {
 	Workspace string
 }
 
-func WorkspacesCreate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func WorkspacesCreate(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
-	params := paramsFor[WorkspacesCreateParams](jparams)
-
-	vn = &app.Validation{}
-	if params.Name == "" {
-		vn.Add("Name", "must not be blank")
-	}
-	if vn.IsInvalid() {
-		return
-	}
+	var vn *app.Validation
+	params := ParamsFor[WorkspacesCreateParams](jparams)
 
 	uc := models.ResolveUserContext("Workspaces")
-	if w, err = models.CreateWorkspace(uc, params.Name, params.About); err != nil {
+	if w, vn, err = models.CreateWorkspace(uc, params.Name, params.About); err != nil {
 		return
 	}
 
@@ -35,6 +28,6 @@ func WorkspacesCreate(jparams []byte) (jbody []byte, vn *app.Validation, err err
 		Workspace: w.Name,
 	}
 
-	jbody = jbodyFor(result)
+	jbody = jbodyFor(result, vn)
 	return
 }

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
 	"sf/models"
@@ -31,7 +30,7 @@ func listFramers() (command any) {
 	return
 }
 
-func listFramersParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func listFramersParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
 	all := context.BoolFlag("all")
 	workspace := context.StringFlag("workspace")
@@ -52,7 +51,7 @@ func listFramersParams(context *cliapp.Context) (jparams []byte, vn *app.Validat
 	return
 }
 
-func listFramersViewer(body map[string]any) (output string, er error) {
+func listFramersViewer(body map[string]any) (output string, err error) {
 	table := &Table{
 		Items:  resultItems(body),
 		Titles: ss("WORKSPACE", "FRAMER", "ABOUT"),
@@ -68,5 +67,6 @@ func listFramersViewer(body map[string]any) (output string, er error) {
 			tableCellNoAccentFn,
 		),
 	}
-	return cliapp.View("framers/index")(table.generate())
+	output, err = cliapp.View("framers/index")(table.generate())
+	return
 }

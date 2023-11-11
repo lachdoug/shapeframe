@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
 	"sf/models"
@@ -24,7 +23,7 @@ func removeWorkspace() (command any) {
 	return
 }
 
-func removeWorkspaceParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func removeWorkspaceParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
 	workspace := context.Argument(0)
 

@@ -2,6 +2,7 @@ package models
 
 import (
 	"path/filepath"
+	"sf/app"
 	"sf/database/queries"
 	"sf/utils"
 	"strings"
@@ -103,6 +104,7 @@ func (wl *WorkspaceLoader) settle() {
 			wl.Preloads = append(wl.Preloads, load)
 		}
 	}
+	utils.UniqStrings(&wl.Preloads)
 }
 
 func (wl *WorkspaceLoader) query() {
@@ -111,7 +113,9 @@ func (wl *WorkspaceLoader) query() {
 
 func (wl *WorkspaceLoader) assign() (err error) {
 	if wl.Repositories {
-		wl.SetRepositories()
+		if err = wl.SetRepositories(); err != nil {
+			return
+		}
 		if err = wl.LoadRepositories(); err != nil {
 			return
 		}
@@ -162,16 +166,31 @@ func (wl *WorkspaceLoader) LoadFrames() (err error) {
 	return
 }
 
-func (wl *WorkspaceLoader) RepositoryDirs() (dirPaths []string) {
-	dirPaths = utils.GitRepoDirs(filepath.Join(wl.Workspace.directory(), "repos"))
+func (wl *WorkspaceLoader) RepositoryURIs() (dirPaths []string, err error) {
+	if dirPaths, err = utils.GitRepoURIs(filepath.Join(wl.Workspace.directory(), "repos")); err != nil {
+		err = app.ErrorWith(err, "repository URIs")
+		return
+	}
 	return
 }
 
-func (wl *WorkspaceLoader) SetRepositories() {
-	for _, dp := range wl.RepositoryDirs() {
-		r := NewRepository(wl.Workspace, dp)
+func (wl *WorkspaceLoader) SetRepositories() (err error) {
+	var rus []string
+	if rus, err = wl.RepositoryURIs(); err != nil {
+		return
+	}
+	for _, ru := range rus {
+		var protocol string
+		if ru[0:4] == "https" {
+			protocol = "HTTPS"
+		} else {
+			protocol = "SSH"
+
+		}
+		r := NewRepository(wl.Workspace, ru, protocol)
 		wl.Workspace.Repositories = append(wl.Workspace.Repositories, r)
 	}
+	return
 }
 
 func (wl *WorkspaceLoader) SetFramers() {

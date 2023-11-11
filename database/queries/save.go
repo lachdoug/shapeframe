@@ -2,7 +2,7 @@ package queries
 
 import "sf/database"
 
-func Update(model any) {
-	query := database.DB.Updates(model)
+func Save(model any) {
+	query := database.DB.Save(model)
 	checkErr(query.Error)
 }

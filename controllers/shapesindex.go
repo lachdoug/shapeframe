@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"sf/app"
 	"sf/models"
 )
 
@@ -18,9 +17,9 @@ type ShapesIndexItemResult struct {
 	IsContext bool
 }
 
-func ShapesIndex(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func ShapesIndex(jparams []byte) (jbody []byte, err error) {
 	var ss []*models.Shape
-	params := paramsFor[ShapesIndexParams](jparams)
+	params := ParamsFor[ShapesIndexParams](jparams)
 
 	uc := models.ResolveUserContext(
 		"Workspace.Frames.Shapes.Frame.Workspace",

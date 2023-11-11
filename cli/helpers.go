@@ -3,7 +3,6 @@ package cli
 import (
 	"encoding/json"
 	"sf/app"
-	"sf/models"
 	"sf/utils"
 
 	"github.com/fatih/color"
@@ -35,18 +34,11 @@ func resultItems(body map[string]any) (items []map[string]any) {
 }
 
 func stream(body map[string]any) (err error) {
-	ch := make(chan []byte)
-	s := models.StreamLoad(body["Stream"].(string))
+	s := utils.StreamLoad(body["Stream"].(string))
 	hideCursor()
-	go s.Read(ch)
-	for b := range ch {
-		m := &models.StreamMessage{}
-		utils.JsonUnmarshal(b, m)
-		if m.Type == "error" {
-			err = app.Error(m.Text)
-			return
-		}
-		app.Print(m.Text)
+	if err = s.ReadOut(app.Out, app.Err); err != nil {
+		err = app.ErrorWith(err, "stream")
+		return
 	}
 	showCursor()
 	return

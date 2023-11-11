@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"sf/app"
 	"sf/models"
 )
 
@@ -24,21 +23,10 @@ type FramesUpdateResultDetails struct {
 	Configuration []map[string]any
 }
 
-func FramesUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func FramesUpdate(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
 	var f *models.Frame
-	params := paramsFor[FramesUpdateParams](jparams)
-
-	vn = &app.Validation{}
-	if params.Workspace == "" {
-		vn.Add("Workspace", "must not be blank")
-	}
-	if params.Frame == "" {
-		vn.Add("Frame", "must not be blank")
-	}
-	if vn.IsInvalid() {
-		return
-	}
+	params := ParamsFor[FramesUpdateParams](jparams)
 
 	uc := models.ResolveUserContext(
 		"Workspaces.Frames",
@@ -56,7 +44,7 @@ func FramesUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) 
 		From: &FramesUpdateResultDetails{
 			Name:          f.Name,
 			About:         f.About,
-			Configuration: f.Configuration.SettingsDetail(),
+			Configuration: f.Configuration.Details(),
 		},
 	}
 
@@ -70,7 +58,7 @@ func FramesUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) 
 	result.To = &FramesUpdateResultDetails{
 		Name:          f.Name,
 		About:         f.About,
-		Configuration: f.Configuration.SettingsDetail(),
+		Configuration: f.Configuration.Details(),
 	}
 
 	jbody = jbodyFor(result)

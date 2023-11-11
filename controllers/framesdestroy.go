@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"sf/app"
 	"sf/models"
 )
 
@@ -15,21 +14,10 @@ type FramesDestroyResult struct {
 	Frame     string
 }
 
-func FramesDestroy(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func FramesDestroy(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
 	var f *models.Frame
-	params := paramsFor[FramesDestroyParams](jparams)
-
-	vn = &app.Validation{}
-	if params.Workspace == "" {
-		vn.Add("Workspace", "must not be blank")
-	}
-	if params.Frame == "" {
-		vn.Add("Frame", "must not be blank")
-	}
-	if vn.IsInvalid() {
-		return
-	}
+	params := ParamsFor[FramesDestroyParams](jparams)
 
 	uc := models.ResolveUserContext(
 		"Frame", "Shape",

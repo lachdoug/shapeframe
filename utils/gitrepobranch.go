@@ -11,12 +11,11 @@ func GitRepoBranch(dirPath string) (branch string, err error) {
 	var g *git.Repository
 	var gr *plumbing.Reference
 	if g, err = git.PlainOpen(dirPath); err != nil {
-		panic("WTF")
-		err = fmt.Errorf("git repo directory %s: %s", dirPath, err)
+		err = fmt.Errorf("git repo branch open directory %s: %s", dirPath, err)
 		return
 	}
 	if gr, err = g.Head(); err != nil {
-		err = fmt.Errorf("git repo directory %s: %s", dirPath, err)
+		err = fmt.Errorf("git repo branch head directory %s: %s", dirPath, err)
 		return
 	}
 	branch = gr.Name().Short()

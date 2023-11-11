@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
 	"sf/models"
@@ -33,7 +32,7 @@ func removeShape() (command any) {
 	return
 }
 
-func removeShapeParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func removeShapeParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
 	var f *models.Frame
 	var s *models.Shape

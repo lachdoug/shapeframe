@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
 	"sf/models"
@@ -29,7 +28,7 @@ func removeFrame() (command any) {
 	return
 }
 
-func removeFrameParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func removeFrameParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
 	var f *models.Frame
 	frame := context.Argument(0)

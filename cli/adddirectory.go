@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
 	"sf/models"
@@ -29,7 +28,7 @@ func addDirectory() (command any) {
 	return
 }
 
-func addDirectoryParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func addDirectoryParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
 	path := context.Argument(0)
 	workspace := context.StringFlag("workspace")
@@ -52,6 +51,7 @@ func addDirectoryParams(context *cliapp.Context) (jparams []byte, vn *app.Valida
 func addDirectoryViewer(body map[string]any) (output string, err error) {
 	var w *models.Workspace
 	var d *models.Directory
+	var gri *models.GitRepoInspector
 	result := resultItem(body)
 
 	uc := models.ResolveUserContext("Workspaces.Directories.Workspace")
@@ -63,7 +63,10 @@ func addDirectoryViewer(body map[string]any) (output string, err error) {
 	}
 
 	// Convert GitRepoInspector to map for use in view
-	result["GitRepo"] = utils.Map(d.GitRepo.Inspect())
+	if gri, err = d.GitRepo.Inspect(); err != nil {
+		return
+	}
+	result["GitRepo"] = utils.Map(gri)
 	body["Result"] = result
 	output, err = cliapp.View(
 		"directories/create",

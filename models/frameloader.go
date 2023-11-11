@@ -10,13 +10,14 @@ import (
 )
 
 type FrameLoader struct {
-	Frame          *Frame
-	Loads          []string
-	Framer         bool
-	Configuration  bool
-	ShapeLoads     []string
-	WorkspaceLoads []string
-	Preloads       []string
+	Frame              *Frame
+	Loads              []string
+	Framer             bool
+	Configuration      bool
+	ConfigurationLoads []string
+	ShapeLoads         []string
+	WorkspaceLoads     []string
+	Preloads           []string
 }
 
 func NewFrameLoader(f *Frame, loads []string) (fl *FrameLoader) {
@@ -41,6 +42,7 @@ func (fl *FrameLoader) dependencies() {
 	if slices.Contains(fl.Loads, "Configuration") {
 		fl.Loads = append(fl.Loads,
 			"Framer",
+			"Configuration.Form",
 		)
 	}
 	if slices.Contains(fl.Loads, "Framer") {
@@ -69,6 +71,9 @@ func (fl *FrameLoader) settle() {
 			fl.Framer = true
 		case "Configuration":
 			fl.Configuration = true
+			if len(elem) > 1 {
+				fl.ConfigurationLoads = append(fl.ConfigurationLoads, elem[1])
+			}
 		case "Workspace":
 			fl.Preloads = append(fl.Preloads, "Workspace")
 			if len(elem) > 1 {
@@ -83,6 +88,7 @@ func (fl *FrameLoader) settle() {
 			fl.Preloads = append(fl.Preloads, load)
 		}
 	}
+	utils.UniqStrings(&fl.Preloads)
 }
 
 func (fl *FrameLoader) query() {
@@ -109,21 +115,24 @@ func (fl *FrameLoader) assign() (err error) {
 		if err = fl.SetConfiguration(); err != nil {
 			return
 		}
-	}
-	return
-}
-
-func (fl *FrameLoader) LoadWorkspace() (err error) {
-	err = fl.Frame.Workspace.Load(fl.WorkspaceLoads...)
-	return
-}
-
-func (fl *FrameLoader) LoadShapes() (err error) {
-	for _, d := range fl.Frame.Shapes {
-		if err = d.Load(fl.ShapeLoads...); err != nil {
+		if err = fl.LoadConfiguration(); err != nil {
 			return
 		}
 	}
+	return
+}
+
+func (fl *FrameLoader) SetConfiguration() (err error) {
+	c := &Configuration{
+		OwnerID:   fl.Frame.ID,
+		OwnerType: "Frame",
+	}
+	queries.Lookup(c)
+	if c.ID == 0 {
+		c = NewConfiguration(fl.Frame)
+	}
+	c.Owner = fl.Frame
+	fl.Frame.Configuration = c
 	return
 }
 
@@ -141,12 +150,21 @@ func (fl *FrameLoader) SetFramer() (err error) {
 	return
 }
 
-func (fl *FrameLoader) SetConfiguration() (err error) {
-	schema := fl.Frame.Framer.ConfigurationFormSchema()
-	if err = schema.Validate(); err != nil {
-		return
+func (fl *FrameLoader) LoadWorkspace() (err error) {
+	err = fl.Frame.Workspace.Load(fl.WorkspaceLoads...)
+	return
+}
+
+func (fl *FrameLoader) LoadShapes() (err error) {
+	for _, d := range fl.Frame.Shapes {
+		if err = d.Load(fl.ShapeLoads...); err != nil {
+			return
+		}
 	}
-	settings := fl.Frame.ConfigurationSettings()
-	fl.Frame.Configuration = NewForm("frame", fl.Frame.Name, schema, settings)
+	return
+}
+
+func (fl *FrameLoader) LoadConfiguration() (err error) {
+	err = fl.Frame.Configuration.Load(fl.ConfigurationLoads...)
 	return
 }

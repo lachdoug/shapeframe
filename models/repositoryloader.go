@@ -17,72 +17,73 @@ type RepositoryLoader struct {
 	Preloads     []string
 }
 
-func NewRepositoryLoader(w *Repository, loads []string) (dl *RepositoryLoader) {
-	dl = &RepositoryLoader{
+func NewRepositoryLoader(w *Repository, loads []string) (rl *RepositoryLoader) {
+	rl = &RepositoryLoader{
 		Repository: w,
 		Loads:      loads,
 	}
 	return
 }
 
-func (dl *RepositoryLoader) load() (err error) {
-	dl.dependencies()
-	dl.settle()
-	err = dl.assign()
+func (rl *RepositoryLoader) load() (err error) {
+	rl.dependencies()
+	rl.settle()
+	err = rl.assign()
 	return
 }
 
-func (dl *RepositoryLoader) dependencies() {
-	if slices.Contains(dl.Loads, "Shapers") || slices.Contains(dl.Loads, "Framers") {
-		dl.Loads = append(dl.Loads,
+func (rl *RepositoryLoader) dependencies() {
+	if slices.Contains(rl.Loads, "Shapers") || slices.Contains(rl.Loads, "Framers") {
+		rl.Loads = append(rl.Loads,
 			"GitRepo",
 		)
 	}
-	utils.UniqStrings(&dl.Loads)
+	utils.UniqStrings(&rl.Loads)
 }
 
-func (dl *RepositoryLoader) settle() {
-	for _, load := range dl.Loads {
+func (rl *RepositoryLoader) settle() {
+	for _, load := range rl.Loads {
 		elem := strings.SplitN(load, ".", 2)
 		switch elem[0] {
 		case "GitRepo":
-			dl.GitRepo = true
+			rl.GitRepo = true
 		case "Shapers":
-			dl.Shapers = true
-			dl.GitRepoLoads = append(dl.GitRepoLoads, "Shapers")
+			rl.Shapers = true
+			rl.GitRepoLoads = append(rl.GitRepoLoads, "Shapers")
 		case "Framers":
-			dl.Framers = true
-			dl.GitRepoLoads = append(dl.GitRepoLoads, "Framers")
+			rl.Framers = true
+			rl.GitRepoLoads = append(rl.GitRepoLoads, "Framers")
 		default:
-			dl.Preloads = append(dl.Preloads, load)
+			rl.Preloads = append(rl.Preloads, load)
 		}
 	}
+	utils.UniqStrings(&rl.Preloads)
 }
 
-func (dl *RepositoryLoader) assign() (err error) {
-	if dl.GitRepo {
-		dl.SetGitRepo()
-		if err = dl.Repository.GitRepo.Load(dl.GitRepoLoads...); err != nil {
+func (rl *RepositoryLoader) assign() (err error) {
+	if rl.GitRepo {
+		rl.SetGitRepo()
+		if err = rl.Repository.GitRepo.Load(rl.GitRepoLoads...); err != nil {
 			return
 		}
 	}
-	if dl.Shapers {
-		dl.SetShapers()
+	if rl.Shapers {
+		rl.SetShapers()
 	}
-	if dl.Framers {
-		dl.SetFramers()
+	if rl.Framers {
+		rl.SetFramers()
 	}
 	return
 }
 
-func (dl *RepositoryLoader) SetGitRepo() {
-	dl.Repository.GitRepo = NewGitRepo(dl.Repository.Workspace, dl.Repository.Path)
+func (rl *RepositoryLoader) SetGitRepo() {
+	rl.Repository.GitRepo = NewGitRepo(rl.Repository.Workspace, rl.Repository.directory())
 }
 
-func (dl *RepositoryLoader) SetFramers() {
-	dl.Repository.Framers = dl.Repository.GitRepo.Framers
+func (rl *RepositoryLoader) SetFramers() {
+	rl.Repository.Framers = rl.Repository.GitRepo.Framers
 }
 
-func (dl *RepositoryLoader) SetShapers() {
-	dl.Repository.Shapers = dl.Repository.GitRepo.Shapers
+func (rl *RepositoryLoader) SetShapers() {
+	rl.Repository.Shapers = rl.Repository.GitRepo.Shapers
 }

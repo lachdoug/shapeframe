@@ -7,10 +7,10 @@ import (
 
 type Deployment struct {
 	Shape  *Shape
-	Stream *Stream
+	Stream *utils.Stream
 }
 
-func NewDeployment(s *Shape, st *Stream) (o *Deployment) {
+func NewDeployment(s *Shape, st *utils.Stream) (o *Deployment) {
 	o = &Deployment{
 		Shape:  s,
 		Stream: st,
@@ -23,7 +23,7 @@ func NewDeployment(s *Shape, st *Stream) (o *Deployment) {
 func (d *Deployment) build() (err error) {
 	d.write("Build %s\n", d.Shape.Name)
 	d.write("Configuration:\n")
-	for _, setting := range d.Shape.Configuration.SettingsDetail() {
+	for _, setting := range d.Shape.Configuration.Details() {
 		d.write("  %s: %s\n", setting["Key"], setting["Value"])
 	}
 
@@ -49,7 +49,7 @@ func (d *Deployment) directory() (dirPath string) {
 }
 
 func (d *Deployment) createConfigYaml() (err error) {
-	utils.YamlWriteFile(d.directory(), "config", d.Shape.ConfigurationSettings())
+	utils.YamlWriteFile(d.directory(), "config", d.Shape.Configuration.Settings())
 	return
 }
 

@@ -1,3 +1,7 @@
+# options: 
+#  -c to continue after failed test
+#  -d to execute command in debug mode
+
 export PATH=$PATH:.
 
 redColor='\033[0;31m'
@@ -8,11 +12,17 @@ noColor='\033[0m'
 
 errorCount=0
 successCount=0
-arg1="$1"
+args=( "$@" )
 
 sf() {
     echo -e "${blueColor}sf $@${noColor}"
-    command sf "$@"
+    if [[ $args =~ "-d" ]]
+    then
+        command sf -debug "$@"
+    else
+        command sf "$@"
+    fi    
+
     if [ $? != 0 ]
     then
         handleFailure
@@ -24,7 +34,7 @@ sf() {
 handleFailure() {
     echo -e "${redColor}Fail${noColor}\n"
     let errorCount=errorCount+1
-    if [ "$arg1" != "-continue" ]
+    if ! [[ $args =~ "-c" ]]
     then
         exit 1
     fi    
@@ -58,14 +68,14 @@ t Adding and removing workspaces
 sf a w W1
 sf rm w W1
 sf a w W1
-sf en W1
+sf cx W1
 sf rm w
 
 t Adding and removing directories
 sf a w W1
 sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
 sf rm d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
-sf en W1
+sf cx W1
 sf a d /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
 sf rm d /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
 sf rm w
@@ -74,39 +84,39 @@ t Adding and removing repositories
 sf a w W1
 sf a r -workspace W1 github.com/lachdoug/shapeframe-apps
 sf rm r -workspace W1 github.com/lachdoug/shapeframe-apps
-sf en W1
+sf cx W1
 sf a r github.com/lachdoug/shapeframe-apps
 sf rm r github.com/lachdoug/shapeframe-apps
-sf a r -ssh github.com/lachdoug/shapeframe-apps
+sf a r -https github.com/lachdoug/shapeframe-apps
 sf pull github.com/lachdoug/shapeframe-apps
 sf rm w
 
 t Adding and removing frames
 sf a w W1
-sf en W1
+sf cx W1
 sf a d /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
 sf a f docker-local
 sf rm f docker-local
 sf a f docker-local
-sf en docker-local
+sf cx docker-local
 sf rm f
-sf ex
+sf cx ..
 sf a f -workspace W1 docker-local
 sf rm f -workspace W1 docker-local
 sf rm w W1
 
 t Adding and removing shapes
 sf a w W1
-sf en W1
+sf cx W1
 sf a d /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
 sf a f docker-local
-sf en docker-local
+sf cx docker-local
 sf a s apache
 sf rm s apache
-sf ex
+sf cx ..
 sf a s -frame docker-local apache
 sf rm s -frame docker-local apache
-sf ex
+sf cx ..
 sf a s -workspace W1 -frame docker-local apache
 sf rm s -workspace W1 -frame docker-local apache
 sf rm w W1
@@ -125,34 +135,52 @@ sf ls f -workspace W1
 sf ls s -workspace W1 
 sf ls sr -workspace W1 
 sf ls fr -workspace W1 
-sf en W1
+sf cx W1
 sf ls f
 sf ls s
 sf ls sr
 sf ls fr
 sf rm w
 
+t Reading
+sf a w W1
+sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
+sf a f -workspace W1 docker-local
+sf a s -workspace W1 -frame docker-local apache
+sf g w W1
+sf g f -workspace W1 docker-local
+sf g s -workspace W1 -frame docker-local apache
+sf cx W1
+sf g w
+sf g f docker-local
+sf g s -frame docker-local apache
+sf cx docker-local
+sf g f
+sf g s apache
+sf cx apache
+sf g s
+sf rm w
+
 t Inspecting
 sf a w W1
 sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
-sf a f -workspace W1 docker-local
-sf a s -workspace W1 -frame docker-local apache
-sf en W1
-sf i w
+sg i W1
+sf cx W1
+sf i
 sf rm w
 
 t Contexting
-sf x
+sf cx
 sf a w W1
 sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
 sf a f -workspace W1 docker-local
 sf a s -workspace W1 -frame docker-local apache
-sf en W1
-sf x
-sf en docker-local
-sf x
-sf en apache
-sf x
+sf cx W1
+sf cx
+sf cx docker-local
+sf cx
+sf cx apache
+sf cx
 sf rm w
 
 t Configuring
@@ -160,13 +188,13 @@ sf a w W1
 sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
 sf a f -workspace W1 docker-local
 sf a s -workspace W1 -frame docker-local apache
-sf c f -workspace W1 -frame docker-local blue foo
-sf c s -workspace W1 -frame docker-local -shape apache blue foo cool
-sf en W1
-sf c f -frame docker-local blue foo
-sf c s -frame docker-local -shape apache blue foo cool
-sf en docker-local
-sf c s -shape apache blue foo cool
+sf cg f -workspace W1 -frame docker-local blue foo
+sf cg s -workspace W1 -frame docker-local -shape apache blue foo cool
+sf cx W1
+sf cg f -frame docker-local blue foo
+sf cg s -frame docker-local -shape apache blue foo cool
+sf cx docker-local
+sf cg s -shape apache blue foo cool
 sf rm w
 
 t Labelling
@@ -174,19 +202,21 @@ sf a w -about "Workspace One" W1
 sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
 sf a f -workspace W1 docker-local
 sf a s -workspace W1 -frame docker-local apache
-sf ll w -name W1! -about "Workspace One!" W1
-sf ll f -workspace W1! -name docker-local! -about "Deploy containers on local Docker Engine!" docker-local
-
-sf ll s -workspace W1! -frame docker-local! -name apache! -about "Apache (Web Server)!" apache
-sf en W1!
-sf ll w -name W1!! -about "Workspace One!!"
-sf ll f -name docker-local!! -about "Deploy containers on local Docker Engine!!" docker-local!
-sf ll s -frame docker-local!! -name apache!! -about "Apache (Web Server)!!" apache!
-sf en docker-local!!
-sf ll f -name docker-local!!! -about "Deploy containers on local Docker Engine!!!"
-sf ll s -name apache!!! -about "Apache (Web Server)!!!" apache!!
-sf en apache!!!
-sf ll s -name apache!!!! -about "Apache (Web Server)!!!!"
+sf ll w -name W1A -about "Workspace OneA" W1
+sf ll f -workspace W1A -name docker-localA -about "Deploy containers on local Docker EngineA" docker-local
+sf ll s -workspace W1A -frame docker-localA -name apacheA -about "Apache (Web Server)A" apache
+sf ll w -name W1B -about "Workspace OneB" W1A
+sf ll f -workspace W1B -name docker-localB -about "Deploy containers on local Docker EngineB" docker-localA
+sf ll s -workspace W1B -frame docker-localB -name apacheB -about "Apache (Web Server)B" apacheA
+sf cx W1B
+sf ll w -name W1C -about "Workspace OneC"
+sf ll f -name docker-localC -about "Deploy containers on local Docker EngineC" docker-localB
+sf ll s -frame docker-localC -name apacheC -about "Apache (Web Server)C" apacheB
+sf cx docker-localC
+sf ll f -name docker-localD -about "Deploy containers on local Docker EngineD"
+sf ll s -name apacheD -about "Apache (Web Server)D" apacheC
+sf cx apacheD
+sf ll s -name apacheE -about "Apache (Web Server)E"
 sf rm w
 
 t Orchestrating
@@ -195,9 +225,9 @@ sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
 sf a f -workspace W1 docker-local
 sf a s -workspace W1 -frame docker-local apache
 sf o -workspace W1 -frame docker-local
-sf en W1
+sf cx W1
 sf o -frame docker-local
-sf en docker-local
+sf cx docker-local
 sf o
 
 t Helping
@@ -213,8 +243,8 @@ sf ll shape -help
 sf ll frame -help
 sf ll workspace -help
 sf configure -help
-sf c shape -help
-sf c frame -help
+sf cg shape -help
+sf cg frame -help
 sf inspect -help
 sf add -help
 sf a shape -help
@@ -229,8 +259,6 @@ sf rm workspace -help
 sf rm repository -help
 sf rm directory -help
 sf pull -help
-sf enter -help
-sf exit -help
 sf context -help
 sf orchestrate -help
 sf nuke -help

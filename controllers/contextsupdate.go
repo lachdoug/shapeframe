@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"sf/app"
 	"sf/models"
 )
 
@@ -16,11 +15,11 @@ type ContextsUpdateResult struct {
 	To   *models.UserContextInspector
 }
 
-func ContextsUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func ContextsUpdate(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
 	var f *models.Frame
 	var s *models.Shape
-	params := paramsFor[ContextsUpdateParams](jparams)
+	params := ParamsFor[ContextsUpdateParams](jparams)
 
 	uc := models.ResolveUserContext(
 		"Workspace",

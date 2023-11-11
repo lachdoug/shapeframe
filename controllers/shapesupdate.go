@@ -26,25 +26,12 @@ type ShapesUpdateResultDetails struct {
 	Configuration []map[string]any
 }
 
-func ShapesUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func ShapesUpdate(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
 	var f *models.Frame
 	var s *models.Shape
-	params := paramsFor[ShapesUpdateParams](jparams)
-
-	vn = &app.Validation{}
-	if params.Workspace == "" {
-		vn.Add("Workspace", "must not be blank")
-	}
-	if params.Frame == "" {
-		vn.Add("Frame", "must not be blank")
-	}
-	if params.Shape == "" {
-		vn.Add("Shape", "must not be blank")
-	}
-	if vn.IsInvalid() {
-		return
-	}
+	var vn *app.Validation
+	params := ParamsFor[ShapesUpdateParams](jparams)
 
 	uc := models.ResolveUserContext(
 		"Workspaces.Frames.Shapes",
@@ -69,14 +56,13 @@ func ShapesUpdate(jparams []byte) (jbody []byte, vn *app.Validation, err error) 
 		},
 	}
 
-	s.Assign(params.Update)
-	s.Save()
+	vn = s.Update(params.Update)
 
 	result.To = &ShapesUpdateResultDetails{
 		Name:  s.Name,
 		About: s.About,
 	}
 
-	jbody = jbodyFor(result)
+	jbody = jbodyFor(result, vn)
 	return
 }

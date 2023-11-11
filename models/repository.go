@@ -1,41 +1,50 @@
 package models
 
-import "sf/app"
+import (
+	"fmt"
+	"net/url"
+	"path/filepath"
+	"sf/app"
+	"sf/utils"
+	"strings"
+)
 
 type Repository struct {
 	Workspace *Workspace
-	Path      string
+	URI       string
+	Protocol  string
 	GitRepo   *GitRepo
 	Framers   []*Framer
 	Shapers   []*Shaper
 }
 
 type RepositoryInspector struct {
-	Path    string
 	GitRepo *GitRepoInspector
 }
 
 // Construction
 
-func NewRepository(w *Workspace, path string) (r *Repository) {
+func NewRepository(w *Workspace, uri string, protocol string) (r *Repository) {
 	r = &Repository{
 		Workspace: w,
-		Path:      path,
+		URI:       uri,
+		Protocol:  protocol,
 	}
 	return
 }
 
-func CreateRepository(w *Workspace, uri string, ssh bool, st *Stream) (r *Repository, err error) {
-	path := w.GitRepoDirectoryFor(uri)
-	r = NewRepository(w, path)
+func CreateRepository(w *Workspace, uri string, protocol string, st *utils.Stream) (r *Repository, vn *app.Validation, err error) {
+	r = NewRepository(w, uri, protocol)
 	if err = r.Load("GitRepo"); err != nil {
 		return
 	}
-	if r.IsExists() {
-		err = app.Error("repository %s already exists in workspace %s", uri, w.Name)
-		return
+	if vn = r.Validation(); vn.IsValid() {
+		if r.IsExists() {
+			err = app.Error("repository %s already exists in workspace %s", uri, w.Name)
+			return
+		}
+		r.Create(st)
 	}
-	r.Create(uri, ssh, st)
 	return
 }
 
@@ -48,8 +57,7 @@ func ResolveRepository(w *Workspace, uri string, loads ...string) (r *Repository
 		err = app.Error("no repositories exist in workspace %s", w.Name)
 		return
 	}
-	path := w.GitRepoDirectoryFor(uri)
-	r = w.FindRepository(path)
+	r = w.FindRepository(uri)
 	if r == nil {
 		err = app.Error("repository %s does not exist in workspace %s", uri, w.Name)
 		return
@@ -64,22 +72,24 @@ func ResolveRepository(w *Workspace, uri string, loads ...string) (r *Repository
 
 // Inspection
 
-func (r *Repository) Inspect() (ri *RepositoryInspector) {
-	ri = &RepositoryInspector{
-		Path:    r.Path,
-		GitRepo: r.GitRepoInspect(),
+func (r *Repository) Inspect() (ri *RepositoryInspector, err error) {
+	var gri *GitRepoInspector
+	if gri, err = r.GitRepo.Inspect(); err != nil {
+		return
 	}
-	return
-}
-
-func (r *Repository) GitRepoInspect() (gri *GitRepoInspector) {
-	if r.GitRepo.isExists() {
-		gri = r.GitRepo.Inspect()
+	fmt.Println("REPOSITORY URI", r.URI)
+	ri = &RepositoryInspector{
+		GitRepo: gri,
 	}
 	return
 }
 
 // Data
+
+func (r *Repository) directory() (dirPath string) {
+	dirPath = r.Workspace.GitRepoDirectoryFor(r.URI)
+	return
+}
 
 func (r *Repository) IsExists() (is bool) {
 	is = r.GitRepo.isExists()
@@ -92,14 +102,39 @@ func (r *Repository) Load(loads ...string) (err error) {
 	return
 }
 
-func (r *Repository) Create(uri string, ssh bool, st *Stream) {
-	go r.GitRepo.clone(uri, ssh, st)
+func (r *Repository) Validation() (vn *app.Validation) {
+	vn = &app.Validation{}
+	if r.URI == "" {
+		vn.Add("URI", "must not be blank")
+	}
+	// if utils.IsGitRemote(r.OriginURL()) {
+	// 	vn.Add("URI", "must be a URI for an accessible remote")
+	// }
+	return
 }
 
-func (r *Repository) Update(st *Stream) {
+func (r *Repository) Create(st *utils.Stream) {
+	go r.GitRepo.clone(r.OriginURL(), st)
+}
+
+func (r *Repository) Update(st *utils.Stream) {
 	go r.GitRepo.pull(st)
 }
 
 func (r *Repository) Destroy() {
 	r.GitRepo.remove()
+}
+
+// URL
+
+func (r *Repository) OriginURL() (u string) {
+	uUrl, _ := url.Parse("https://" + r.URI)
+	host := uUrl.Host
+	path := filepath.Join(strings.Split(uUrl.Path, "/")...)
+	if r.Protocol == "HTTPS" {
+		u = fmt.Sprintf("https://%s/%s", host, path)
+	} else {
+		u = fmt.Sprintf("git@%s:%s.git", host, path)
+	}
+	return
 }

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"sf/app"
 	"sf/cli/cliapp"
 	"sf/controllers"
 	"sf/models"
@@ -37,7 +36,7 @@ func labelShape() (command any) {
 	return
 }
 
-func labelShapeParams(context *cliapp.Context) (jparams []byte, vn *app.Validation, err error) {
+func labelShapeParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
 	var f *models.Frame
 	var s *models.Shape

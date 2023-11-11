@@ -1,8 +1,6 @@
 package controllers
 
 import (
-	"net/url"
-	"sf/app"
 	"sf/models"
 )
 
@@ -16,24 +14,10 @@ type RepositoriesDestroyResult struct {
 	Workspace string
 }
 
-func RepositoriesDestroy(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func RepositoriesDestroy(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
 	var r *models.Repository
-	params := paramsFor[RepositoriesDestroyParams](jparams)
-
-	vn = &app.Validation{}
-	if params.Workspace == "" {
-		vn.Add("Workspace", "must not be blank")
-	}
-	if params.URI == "" {
-		vn.Add("URI", "must not be blank")
-	}
-	if _, err = url.Parse("https://" + params.URI); err != nil {
-		vn.Add("URI", "must be valid URI")
-	}
-	if vn.IsInvalid() {
-		return
-	}
+	params := ParamsFor[RepositoriesDestroyParams](jparams)
 
 	uc := models.ResolveUserContext("Workspaces")
 	if w, err = models.ResolveWorkspace(uc, params.Workspace, "Repositories"); err != nil {

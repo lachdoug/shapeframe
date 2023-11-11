@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"sf/app"
 	"sf/models"
 )
 
@@ -17,25 +16,11 @@ type ShapesDestroyResult struct {
 	Shape     string
 }
 
-func ShapesDestroy(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func ShapesDestroy(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
 	var f *models.Frame
 	var s *models.Shape
-	params := paramsFor[ShapesDestroyParams](jparams)
-
-	vn = &app.Validation{}
-	if params.Workspace == "" {
-		vn.Add("Workspace", "must not be blank")
-	}
-	if params.Frame == "" {
-		vn.Add("Frame", "must not be blank")
-	}
-	if params.Shape == "" {
-		vn.Add("Shape", "must not be blank")
-	}
-	if vn.IsInvalid() {
-		return
-	}
+	params := ParamsFor[ShapesDestroyParams](jparams)
 
 	uc := models.ResolveUserContext(
 		"Shape",

@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"path/filepath"
-	"sf/app"
 	"sf/models"
 )
 
@@ -16,22 +15,11 @@ type DirectoriesDestroyResult struct {
 	Path      string
 }
 
-func DirectoriesDestroy(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func DirectoriesDestroy(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
 	var d *models.Directory
 	var path string
-	params := paramsFor[DirectoriesDestroyParams](jparams)
-
-	vn = &app.Validation{}
-	if params.Workspace == "" {
-		vn.Add("Workspace", "must not be blank")
-	}
-	if params.Path == "" {
-		vn.Add("Path", "must not be blank")
-	}
-	if vn.IsInvalid() {
-		return
-	}
+	params := ParamsFor[DirectoriesDestroyParams](jparams)
 
 	if path, err = filepath.Abs(params.Path); err != nil {
 		return

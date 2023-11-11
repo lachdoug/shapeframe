@@ -3,7 +3,6 @@ package cliapp
 import (
 	"fmt"
 	"os"
-	"sf/app"
 	"strings"
 
 	ucli "github.com/urfave/cli/v2"
@@ -71,8 +70,8 @@ func uSubcommands(commands []func() any) (usubcommands []*ucli.Command) {
 
 func uAction(
 	kind string,
-	parametizer func(*Context) ([]byte, *app.Validation, error),
-	controller func([]byte) ([]byte, *app.Validation, error),
+	parametizer func(*Context) ([]byte, error),
+	controller func([]byte) ([]byte, error),
 	viewer func(map[string]any) (string, error),
 ) (ufunction func(*ucli.Context) error) {
 	ufunction = func(ucontext *ucli.Context) (err error) {
@@ -91,24 +90,29 @@ func uAction(
 }
 
 func uFlags(flags []string) (uflags []ucli.Flag) {
-	uflags = append(uflags, uFlag("bool", "help", "Show help"))
+	uflags = append(uflags, uFlag("bool", "help h ?", "Show help"))
 	for i := 0; i < len(flags); i += 3 {
 		uflags = append(uflags, uFlag(flags[i], flags[i+1], flags[i+2]))
 	}
 	return
 }
 
-func uFlag(kind string, name string, about string) (uflag ucli.Flag) {
+func uFlag(kind string, namers string, about string) (uflag ucli.Flag) {
+	names := strings.Split(namers, " ")
+	name := names[0]
+	aliases := names[1:]
 	switch kind {
 	case "bool":
 		uflag = &ucli.BoolFlag{
-			Name:  name,
-			Usage: about,
+			Name:    name,
+			Aliases: aliases,
+			Usage:   about,
 		}
 	case "string":
 		uflag = &ucli.StringFlag{
-			Name:  name,
-			Usage: about,
+			Name:    name,
+			Aliases: aliases,
+			Usage:   about,
 		}
 	}
 	return

@@ -2,11 +2,9 @@ package utils
 
 import (
 	"os"
-	"path/filepath"
 )
 
-func StreamAppend(dirPath string, p []byte) {
-	filePath := filepath.Join(dirPath, "out")
+func AppendFile(filePath string, p []byte) {
 	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 	checkErr(err)
 	defer func() {

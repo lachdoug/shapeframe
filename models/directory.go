@@ -3,6 +3,7 @@ package models
 import (
 	"sf/app"
 	"sf/database/queries"
+	"sf/utils"
 	"time"
 
 	"gorm.io/plugin/soft_delete"
@@ -36,13 +37,15 @@ func NewDirectory(w *Workspace, path string) (d *Directory) {
 	return
 }
 
-func CreateDirectory(w *Workspace, path string) (d *Directory, err error) {
+func CreateDirectory(w *Workspace, path string) (d *Directory, vn *app.Validation, err error) {
 	d = NewDirectory(w, path)
-	if d.IsExists() {
-		err = app.Error("directory %s already exists in workspace %s", path, w.Name)
-		return
+	if vn = d.Validation(); vn.IsValid() {
+		if d.IsExists() {
+			err = app.Error("directory %s already exists in workspace %s", path, w.Name)
+			return
+		}
+		d.Save()
 	}
-	d.Create()
 	return
 }
 
@@ -70,16 +73,15 @@ func ResolveDirectory(w *Workspace, path string, loads ...string) (d *Directory,
 
 // Inspection
 
-func (d *Directory) Inspect() (di *DirectoryInspector) {
+func (d *Directory) Inspect() (di *DirectoryInspector, err error) {
+	var gri *GitRepoInspector
+	if gri, err = d.GitRepo.Inspect(); err != nil {
+		return
+	}
 	di = &DirectoryInspector{
 		Path:    d.Path,
-		GitRepo: d.GitRepoInspect(),
+		GitRepo: gri,
 	}
-	return
-}
-
-func (d *Directory) GitRepoInspect() (gri *GitRepoInspector) {
-	gri = d.GitRepo.Inspect()
 	return
 }
 
@@ -99,8 +101,19 @@ func (d *Directory) Load(loads ...string) (err error) {
 	return
 }
 
-func (d *Directory) Create() {
-	queries.Create(d)
+func (d *Directory) Validation() (vn *app.Validation) {
+	vn = &app.Validation{}
+	if d.Path == "" {
+		vn.Add("Path", "must not be blank")
+	}
+	if !utils.IsDir(d.Path) {
+		vn.Add("Path", "must be a valid directory path")
+	}
+	return
+}
+
+func (d *Directory) Save() {
+	queries.Save(d)
 }
 
 func (d *Directory) Destroy() {

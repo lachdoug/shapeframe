@@ -53,6 +53,7 @@ func (sr *Shaper) Inspect() (sri *ShaperInspector) {
 func (sr *Shaper) URI() (uri string, err error) {
 	var gruri string
 	if gruri, err = utils.GitRepoURI(sr.Path); err != nil {
+		err = app.ErrorWith(err, "shaper URI")
 		return
 	}
 	uri = gruri + "#" + sr.Name
@@ -73,7 +74,7 @@ func (sr *Shaper) Load() (err error) {
 
 // Configuration
 
-func (sr *Shaper) ConfigurationFormSchema() (schema *FormSchema) {
+func (sr *Shaper) configurationFormSchema() (schema *FormSchema) {
 	schema = NewFormSchema("shaper", sr.Name, sr.Config)
 	return
 }

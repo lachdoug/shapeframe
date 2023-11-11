@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"sf/app"
 	"sf/models"
 )
 
@@ -9,26 +8,22 @@ type WorkspacesReadParams struct {
 	Workspace string
 }
 
-func WorkspacesRead(jparams []byte) (jbody []byte, vn *app.Validation, err error) {
+func WorkspacesRead(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
-	params := paramsFor[WorkspacesReadParams](jparams)
+	params := ParamsFor[WorkspacesReadParams](jparams)
 
 	uc := models.ResolveUserContext(
 		"Workspaces",
 	)
 	if w, err = models.ResolveWorkspace(uc, params.Workspace,
-		"Frames.Configuration",
-		"Frames.Shapes.Configuration",
-		"Directories.Workspace",
-		"Directories.Framers",
-		"Directories.Shapers",
-		"Repositories.Framers",
-		"Repositories.Shapers",
+		"Frames",
+		"Directories",
+		"Repositories.GitRepo",
 	); err != nil {
 		return
 	}
 
-	result := w.Inspect()
+	result := w.Read()
 
 	jbody = jbodyFor(result)
 	return
