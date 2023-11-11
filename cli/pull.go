@@ -21,9 +21,15 @@ func pull() (command any) {
 			"  Otherwise prompt for URI",
 			"Provide an optional workspace name using the -workspace flag",
 			"  Uses workspace context when not provided",
+			"Include a username for HTTPS pull by setting the -username flag",
+			"  Otherwise performs git pull without a password when using HTTPS",
+			"Include a password (or access token) for HTTPS pull by setting the -password flag",
+			"  Otherwise performs git pull without a password when using HTTPS",
 		),
 		Flags: ss(
 			"string", "workspace", "Workspace name",
+			"string", "username u", "Username for git pull",
+			"string", "password p", "Password for git pull",
 		),
 		Parametizer: pullParams,
 		Controller:  controllers.RepositoryPullsCreate,
@@ -34,11 +40,13 @@ func pull() (command any) {
 
 func pullParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
-	workspace := context.StringFlag("workspace")
 	uri := context.Argument(0)
+	workspace := context.StringFlag("workspace")
+	username := context.StringFlag("username")
+	password := context.StringFlag("password")
 
-	uc := models.ResolveUserContext("Workspace")
-	if w, err = models.ResolveWorkspace(uc, workspace, "Repositories"); err != nil {
+	uc := models.ResolveUserContext("Workspace", "Workspaces")
+	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
 		return
 	}
 
@@ -51,6 +59,8 @@ func pullParams(context *cliapp.Context) (jparams []byte, err error) {
 	jparams = jsonParams(map[string]any{
 		"Workspace": w.Name,
 		"URI":       uri,
+		"Username":  username,
+		"Password":  password,
 	})
 	return
 }

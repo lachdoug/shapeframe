@@ -13,6 +13,7 @@ type Repository struct {
 	Workspace *Workspace
 	URI       string
 	Protocol  string
+	Token     string
 	GitRepo   *GitRepo
 	Framers   []*Framer
 	Shapers   []*Shaper
@@ -24,17 +25,16 @@ type RepositoryInspector struct {
 
 // Construction
 
-func NewRepository(w *Workspace, uri string, protocol string) (r *Repository) {
+func NewRepository(w *Workspace, uri string) (r *Repository) {
 	r = &Repository{
 		Workspace: w,
 		URI:       uri,
-		Protocol:  protocol,
 	}
 	return
 }
 
-func CreateRepository(w *Workspace, uri string, protocol string, st *utils.Stream) (r *Repository, vn *app.Validation, err error) {
-	r = NewRepository(w, uri, protocol)
+func CreateRepository(w *Workspace, uri string, protocol string, username string, token string, st *utils.Stream) (r *Repository, vn *app.Validation, err error) {
+	r = NewRepository(w, uri)
 	if err = r.Load("GitRepo"); err != nil {
 		return
 	}
@@ -43,7 +43,7 @@ func CreateRepository(w *Workspace, uri string, protocol string, st *utils.Strea
 			err = app.Error("repository %s already exists in workspace %s", uri, w.Name)
 			return
 		}
-		r.Create(st)
+		r.Create(protocol, username, token, st)
 	}
 	return
 }
@@ -113,12 +113,12 @@ func (r *Repository) Validation() (vn *app.Validation) {
 	return
 }
 
-func (r *Repository) Create(st *utils.Stream) {
-	go r.GitRepo.clone(r.OriginURL(), st)
+func (r *Repository) Create(protocol string, username string, password string, st *utils.Stream) {
+	go r.GitRepo.clone(r.OriginURL(protocol), username, password, st)
 }
 
-func (r *Repository) Update(st *utils.Stream) {
-	go r.GitRepo.pull(st)
+func (r *Repository) Update(username string, password string, st *utils.Stream) {
+	go r.GitRepo.pull(username, password, st)
 }
 
 func (r *Repository) Destroy() {
@@ -127,11 +127,11 @@ func (r *Repository) Destroy() {
 
 // URL
 
-func (r *Repository) OriginURL() (u string) {
+func (r *Repository) OriginURL(protocol string) (u string) {
 	uUrl, _ := url.Parse("https://" + r.URI)
 	host := uUrl.Host
 	path := filepath.Join(strings.Split(uUrl.Path, "/")...)
-	if r.Protocol == "HTTPS" {
+	if protocol == "HTTPS" {
 		u = fmt.Sprintf("https://%s/%s", host, path)
 	} else {
 		u = fmt.Sprintf("git@%s:%s.git", host, path)

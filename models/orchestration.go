@@ -61,7 +61,7 @@ func (o *Orchestration) write(format string, a ...any) {
 }
 
 func (o *Orchestration) error(err error, format string, a ...any) {
-	err = app.ErrorWith(err, format, a...)
+	err = app.ErrorWrapf(err, format, a...)
 	o.Stream.Error(err)
 }
 

@@ -53,7 +53,7 @@ func (sr *Shaper) Inspect() (sri *ShaperInspector) {
 func (sr *Shaper) URI() (uri string, err error) {
 	var gruri string
 	if gruri, err = utils.GitRepoURI(sr.Path); err != nil {
-		err = app.ErrorWith(err, "shaper URI")
+		err = app.ErrorWrapf(err, "shaper URI")
 		return
 	}
 	uri = gruri + "#" + sr.Name
@@ -67,7 +67,7 @@ func (sr *Shaper) directory() (dirPath string) {
 
 func (sr *Shaper) Load() (err error) {
 	if err = utils.YamlReadFile(sr.directory(), "shaper", sr); err != nil {
-		err = app.ErrorWith(err, "load shaper %s in %s", sr.Name, sr.Path)
+		err = app.ErrorWrapf(err, "load shaper %s in %s", sr.Name, sr.Path)
 	}
 	return
 }

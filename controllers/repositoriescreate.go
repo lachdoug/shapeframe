@@ -10,6 +10,8 @@ type RepositoriesCreateParams struct {
 	Workspace string
 	URI       string
 	Protocol  string
+	Username  string
+	Password  string
 }
 
 type RepositoriesCreateResult struct {
@@ -32,14 +34,14 @@ func RepositoriesCreate(jparams []byte) (jbody []byte, err error) {
 	if w, err = models.ResolveWorkspace(uc, params.Workspace, "Repositories"); err != nil {
 		return
 	}
-	if r, vn, err = models.CreateRepository(w, params.URI, params.Protocol, st); err != nil {
+	if r, vn, err = models.CreateRepository(w, params.URI, params.Protocol, params.Username, params.Password, st); err != nil {
 		return
 	}
 
 	result := &RepositoriesCreateResult{
 		Workspace: r.Workspace.Name,
 		URI:       params.URI,
-		URL:       r.OriginURL(),
+		URL:       r.OriginURL(params.Protocol),
 	}
 
 	jbody = jbodyFor(result, vn, st)

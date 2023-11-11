@@ -3,8 +3,6 @@ package models
 import (
 	"sf/app"
 	"sf/utils"
-
-	"github.com/go-git/go-git/v5"
 )
 
 type GitRepo struct {
@@ -92,68 +90,33 @@ func (g *GitRepo) remove() {
 	utils.RemoveDir(g.Path)
 }
 
-func (g *GitRepo) clone(url string, st *utils.Stream) {
-	utils.GitRemoteClone(g.Path, url, st)
-	var err error
-	tmp := utils.TempDir("clone")
-	d := g.Path
-	utils.RemoveDir(tmp)
-	utils.MakeDir(tmp)
-	o := &git.CloneOptions{
-		URL:      url,
-		Depth:    1,
-		Progress: st,
-	}
-	if _, err = git.PlainClone(tmp, false, o); err != nil {
-		st.Error(err)
-	}
-	utils.MoveDir(tmp, d)
-	st.Close()
+func (g *GitRepo) clone(url string, username string, password string, st *utils.Stream) {
+	utils.GitRemoteClone(g.Path, url, username, password, st)
 }
 
-func (g *GitRepo) pull(st *utils.Stream) {
-	var gr *git.Repository
-	var gw *git.Worktree
-	var err error
-	d := g.Path
-	o := &git.PullOptions{
-		RemoteName: "origin",
-		Depth:      1,
-		Progress:   st,
-	}
-	if gr, err = git.PlainOpen(d); err != nil {
-		st.Error(err)
-	} else if gw, err = gr.Worktree(); err != nil {
-		st.Error(err)
-	} else if err = gw.Pull(o); err != nil {
-		if err == git.NoErrAlreadyUpToDate {
-			st.Writef("Already up to date\n")
-		} else {
-			st.Error(err)
-		}
-	}
-	st.Close()
+func (g *GitRepo) pull(username string, password string, st *utils.Stream) {
+	utils.GitRemotePull(g.Path, username, password, st)
 }
 
 // Repo
 
 func (g *GitRepo) URI() (url string, err error) {
 	if url, err = utils.GitRepoURI(g.Path); err != nil {
-		err = app.ErrorWith(err, "gitrepo uri")
+		err = app.ErrorWrapf(err, "gitrepo uri")
 	}
 	return
 }
 
 func (g *GitRepo) URL() (url string, err error) {
 	if url, err = utils.GitRepoURL(g.Path); err != nil {
-		err = app.ErrorWith(err, "gitrepo url")
+		err = app.ErrorWrapf(err, "gitrepo url")
 	}
 	return
 }
 
 func (g *GitRepo) Branch() (branch string, err error) {
 	if branch, err = utils.GitRepoBranch(g.Path); err != nil {
-		err = app.ErrorWith(err, "gitrepo branch")
+		err = app.ErrorWrapf(err, "gitrepo branch")
 	}
 	return
 }

@@ -2,7 +2,9 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"os"
+	"regexp"
 	"sf/app"
 	"sf/cli"
 	"sf/database"
@@ -18,8 +20,7 @@ var views embed.FS
 func init() {
 	app.SetDebug(os.Args)
 	app.SetIO(os.Stdout, os.Stdin, os.Stderr)
-	app.InitViews(&views)
-	app.InitDataDir()
+	app.SetViews(&views)
 	database.Connect()
 	migration.Migrate()
 }
@@ -29,7 +30,11 @@ func main() {
 		port := arg(1)
 		app.Println("Start the GUI", port)
 	} else {
-		cli.Router(cliArgs())
+		rargs := cliRouterArgs()
+		if app.Debug {
+			debugMessage(rargs)
+		}
+		cli.Router(rargs)
 	}
 }
 
@@ -45,13 +50,25 @@ func arg(i int) (val string) {
 	return
 }
 
-func cliArgs() (args []string) {
+func cliRouterArgs() (rargs []string) {
 	if app.Debug {
-		// Do not show the -debug flag when printing the command
-		args = append(os.Args[0:1], os.Args[2:]...)
-		app.PrintfErr("Debug: %s\n", strings.Join(args, " "))
+		// Remove the -debug flag fram args before passing to router
+		rargs = append(os.Args[0:1], os.Args[2:]...)
 	} else {
-		args = os.Args
+		rargs = os.Args
 	}
 	return
+}
+
+func debugMessage(rargs []string) {
+	redColor := "\033[0;31m"
+	noColor := "\033[0m"
+	// Quote args with spaces
+	argHasSpaceRegexp := regexp.MustCompile(`\s`)
+	for i, rarg := range rargs {
+		if argHasSpaceRegexp.Match([]byte(rarg)) {
+			rargs[i] = fmt.Sprintf("%q", rarg)
+		}
+	}
+	app.PrintfErr("%sDebug: %s%s\n", redColor, strings.Join(rargs, " "), noColor)
 }

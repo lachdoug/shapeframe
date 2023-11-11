@@ -27,6 +27,13 @@ func NewConfiguration(owner Configurationer) (c *Configuration) {
 	return
 }
 
+func (c *Configuration) IsSet() (is bool) {
+	if c.JSON.String() != "" {
+		is = true
+	}
+	return
+}
+
 func (c *Configuration) Load(loads ...string) (err error) {
 	cl := NewConfigurationLoader(c, loads)
 	err = cl.load()
@@ -44,10 +51,9 @@ func (c *Configuration) Update(update map[string]any) (vn *app.Validation, err e
 }
 
 func (c *Configuration) Settings() (settings map[string]any) {
-	j := c.JSON.String()
-	if j != "" {
+	if c.IsSet() {
 		settings = map[string]any{}
-		utils.JsonUnmarshal([]byte(string(c.JSON)), &settings)
+		utils.JsonUnmarshal([]byte(c.JSON.String()), &settings)
 	}
 	return
 }

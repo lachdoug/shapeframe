@@ -8,6 +8,8 @@ import (
 type RepositoryPullsCreateParams struct {
 	Workspace string
 	URI       string
+	Username  string
+	Password  string
 }
 
 type RepositoryPullsCreateResult struct {
@@ -30,7 +32,7 @@ func RepositoryPullsCreate(jparams []byte) (jbody []byte, err error) {
 	if r, err = models.ResolveRepository(w, params.URI, "GitRepo"); err != nil {
 		return
 	}
-	r.Update(st)
+	r.Update(params.Username, params.Password, st)
 
 	if url, err = r.GitRepo.URL(); err != nil {
 		return

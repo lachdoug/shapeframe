@@ -19,11 +19,17 @@ func addRepository() (command any) {
 			"Provide an optional workspace name using the -workspace flag",
 			"  Uses workspace context when not provided",
 			"Clone with https by setting the -https flag",
-			"  Otherwise uses SSS",
+			"  Otherwise performs git clone using SSH",
+			"Include a username for HTTPS clone by setting the -username flag",
+			"  Otherwise performs git clone without a token when using HTTPS",
+			"Include a password (or personal access token) for HTTPS clone by setting the -password flag",
+			"  Otherwise performs git clone without a password when using HTTPS",
 		),
 		Flags: ss(
 			"string", "workspace", "Workspace name",
-			"bool", "https", "Use HTTPS for git clone and pull",
+			"bool", "https H", "Use HTTPS for git clone",
+			"string", "username u", "Username for git clone",
+			"string", "password p", "Password for git clone",
 		),
 		Parametizer: addRepositoryParams,
 		Controller:  controllers.RepositoriesCreate,
@@ -34,9 +40,11 @@ func addRepository() (command any) {
 
 func addRepositoryParams(context *cliapp.Context) (jparams []byte, err error) {
 	var w *models.Workspace
+	var protocol string
 	uri := context.Argument(0)
-	protocol := "ssh"
 	workspace := context.StringFlag("workspace")
+	username := context.StringFlag("username")
+	password := context.StringFlag("password")
 
 	if context.BoolFlag("https") {
 		protocol = "HTTPS"
@@ -51,6 +59,8 @@ func addRepositoryParams(context *cliapp.Context) (jparams []byte, err error) {
 		"Workspace": w.Name,
 		"URI":       uri,
 		"Protocol":  protocol,
+		"Username":  username,
+		"Password":  password,
 	})
 	return
 }

@@ -17,7 +17,11 @@ func SetDebug(args []string) {
 	}
 }
 
-func ErrorWith(err error, f string, a ...any) error {
+func ErrorWrap(err error) error {
+	return appError(err.Error())
+}
+
+func ErrorWrapf(err error, f string, a ...any) error {
 	msg := fmt.Sprintf("%s: %s", fmt.Sprintf(f, a...), err.Error())
 	return appError(msg)
 }

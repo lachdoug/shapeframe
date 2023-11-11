@@ -168,7 +168,7 @@ func (wl *WorkspaceLoader) LoadFrames() (err error) {
 
 func (wl *WorkspaceLoader) RepositoryURIs() (dirPaths []string, err error) {
 	if dirPaths, err = utils.GitRepoURIs(filepath.Join(wl.Workspace.directory(), "repos")); err != nil {
-		err = app.ErrorWith(err, "repository URIs")
+		err = app.ErrorWrapf(err, "repository URIs")
 		return
 	}
 	return
@@ -180,14 +180,14 @@ func (wl *WorkspaceLoader) SetRepositories() (err error) {
 		return
 	}
 	for _, ru := range rus {
-		var protocol string
-		if ru[0:4] == "https" {
-			protocol = "HTTPS"
-		} else {
-			protocol = "SSH"
+		// var protocol string
+		// if ru[0:4] == "https" {
+		// 	protocol = "HTTPS"
+		// } else {
+		// 	protocol = "SSH"
 
-		}
-		r := NewRepository(wl.Workspace, ru, protocol)
+		// }
+		r := NewRepository(wl.Workspace, ru)
 		wl.Workspace.Repositories = append(wl.Workspace.Repositories, r)
 	}
 	return

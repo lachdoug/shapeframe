@@ -52,7 +52,7 @@ func (fr *Framer) Inspect() (fri *FramerInspector) {
 func (fr *Framer) URI() (uri string, err error) {
 	var gruri string
 	if gruri, err = utils.GitRepoURI(fr.Path); err != nil {
-		err = app.ErrorWith(err, "framer URI")
+		err = app.ErrorWrapf(err, "framer URI")
 		return
 	}
 	uri = gruri + "#" + fr.Name
@@ -66,7 +66,7 @@ func (fr *Framer) directory() (dirPath string) {
 
 func (fr *Framer) Load() (err error) {
 	if err = utils.YamlReadFile(fr.directory(), "framer", fr); err != nil {
-		err = app.ErrorWith(err, "load framer %s in %s", fr.Name, fr.Path)
+		err = app.ErrorWrapf(err, "load framer %s in %s", fr.Name, fr.Path)
 	}
 	return
 }

@@ -36,11 +36,11 @@ func resultItems(body map[string]any) (items []map[string]any) {
 func stream(body map[string]any) (err error) {
 	s := utils.StreamLoad(body["Stream"].(string))
 	hideCursor()
+	defer showCursor()
 	if err = s.ReadOut(app.Out, app.Err); err != nil {
-		err = app.ErrorWith(err, "stream")
+		err = app.ErrorWrap(err)
 		return
 	}
-	showCursor()
 	return
 }
 
