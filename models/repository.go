@@ -23,6 +23,15 @@ type RepositoryInspector struct {
 	GitRepo *GitRepoInspector
 }
 
+type RepositoryReader struct {
+	Workspace string
+	URI       string
+	Branch    string
+	Branches  []string
+	Shapers   []string
+	Framers   []string
+}
+
 // Construction
 
 func NewRepository(w *Workspace, uri string) (r *Repository) {
@@ -77,9 +86,30 @@ func (r *Repository) Inspect() (ri *RepositoryInspector, err error) {
 	if gri, err = r.GitRepo.Inspect(); err != nil {
 		return
 	}
-	fmt.Println("REPOSITORY URI", r.URI)
 	ri = &RepositoryInspector{
 		GitRepo: gri,
+	}
+	return
+}
+
+// Read
+
+func (r *Repository) Read() (rr *RepositoryReader, err error) {
+	var branch string
+	var branches []string
+	if branch, err = r.GitRepo.Branch(); err != nil {
+		return
+	}
+	if branches, err = r.GitRepo.Branches(); err != nil {
+		return
+	}
+	rr = &RepositoryReader{
+		Workspace: r.Workspace.Name,
+		URI:       r.URI,
+		Branch:    branch,
+		Branches:  branches,
+		Shapers:   r.GitRepo.ShaperNames(),
+		Framers:   r.GitRepo.FramerNames(),
 	}
 	return
 }
@@ -107,9 +137,6 @@ func (r *Repository) Validation() (vn *app.Validation) {
 	if r.URI == "" {
 		vn.Add("URI", "must not be blank")
 	}
-	// if utils.IsGitRemote(r.OriginURL()) {
-	// 	vn.Add("URI", "must be a URI for an accessible remote")
-	// }
 	return
 }
 

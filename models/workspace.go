@@ -98,8 +98,8 @@ func ResolveWorkspace(uc *UserContext, name string, loads ...string) (w *Workspa
 
 // Read
 
-func (w *Workspace) Read() (wi *WorkspaceReader) {
-	wi = &WorkspaceReader{
+func (w *Workspace) Read() (wr *WorkspaceReader) {
+	wr = &WorkspaceReader{
 		Name:         w.Name,
 		About:        w.About,
 		Frames:       w.FrameNames(),

@@ -14,15 +14,14 @@ func FramesRead(jparams []byte) (jbody []byte, err error) {
 	var f *models.Frame
 	params := ParamsFor[FramesReadParams](jparams)
 
-	uc := models.ResolveUserContext("Workspaces.Frames")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
+	uc := models.ResolveUserContext("Workspaces")
+	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		"Frames",
+	); err != nil {
 		return
 	}
 	if f, err = models.ResolveFrame(uc, w, params.Frame,
-		"Workspace",
-		"Configuration",
-		"Shapes",
-		"Parent",
+		"Workspace", "Configuration", "Shapes", "Parent",
 	); err != nil {
 		return
 	}

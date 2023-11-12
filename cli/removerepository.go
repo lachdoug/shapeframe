@@ -33,8 +33,7 @@ func removeRepositoryParams(context *cliapp.Context) (jparams []byte, err error)
 	workspace := context.StringFlag("workspace")
 
 	uc := models.ResolveUserContext(
-		"Workspace",
-		"Workspaces",
+		"Workspaces", "Workspace",
 	)
 	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
 		return

@@ -53,12 +53,18 @@ func addDirectoryViewer(body map[string]any) (output string, err error) {
 	var d *models.Directory
 	var gri *models.GitRepoInspector
 	result := resultItem(body)
+	workspace := result["Workspace"].(string)
+	path := result["Path"].(string)
 
-	uc := models.ResolveUserContext("Workspaces.Directories.Workspace")
-	if w, err = models.ResolveWorkspace(uc, result["Workspace"].(string)); err != nil {
+	uc := models.ResolveUserContext("Workspaces")
+	if w, err = models.ResolveWorkspace(uc, workspace,
+		"Directories",
+	); err != nil {
 		return
 	}
-	if d, err = models.ResolveDirectory(w, result["Path"].(string), "Shapers", "Framers"); err != nil {
+	if d, err = models.ResolveDirectory(w, path,
+		"Workspace", "Shapers", "Framers",
+	); err != nil {
 		return
 	}
 

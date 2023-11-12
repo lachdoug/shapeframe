@@ -48,10 +48,10 @@ func addShapeParams(context *cliapp.Context) (jparams []byte, err error) {
 
 	uc := models.ResolveUserContext(
 		"Frame",
-		"Workspace.Frames",
-		"Workspaces.Frames",
+		"Workspace",
+		"Workspaces",
 	)
-	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
+	if w, err = models.ResolveWorkspace(uc, workspace, "Frames"); err != nil {
 		return
 	}
 	if f, err = models.ResolveFrame(uc, w, frame); err != nil {

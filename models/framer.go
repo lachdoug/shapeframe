@@ -51,7 +51,7 @@ func (fr *Framer) Inspect() (fri *FramerInspector) {
 
 func (fr *Framer) URI() (uri string, err error) {
 	var gruri string
-	if gruri, err = utils.GitRepoURI(fr.Path); err != nil {
+	if gruri, err = utils.GitURI(fr.Path); err != nil {
 		err = app.ErrorWrapf(err, "framer URI")
 		return
 	}

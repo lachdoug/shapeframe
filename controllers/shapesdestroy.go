@@ -23,13 +23,16 @@ func ShapesDestroy(jparams []byte) (jbody []byte, err error) {
 	params := ParamsFor[ShapesDestroyParams](jparams)
 
 	uc := models.ResolveUserContext(
-		"Shape",
-		"Workspaces.Frames.Shapes",
+		"Workspaces", "Shape",
 	)
-	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
+	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		"Frames",
+	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, params.Frame); err != nil {
+	if f, err = models.ResolveFrame(uc, w, params.Frame,
+		"Shapes",
+	); err != nil {
 		return
 	}
 	if s, err = models.ResolveShape(uc, f, params.Shape); err != nil {

@@ -13,6 +13,7 @@ func get() (commandset any) {
 			getShape,
 			getFrame,
 			getWorkspace,
+			getRepository,
 		),
 	}
 	return

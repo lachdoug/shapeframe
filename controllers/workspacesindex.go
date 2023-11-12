@@ -11,16 +11,10 @@ type WorkspacesIndexItemResult struct {
 }
 
 func WorkspacesIndex(jparams []byte) (jbody []byte, err error) {
-	var ws []*models.Workspace
-
-	uc := models.ResolveUserContext(
-		"Workspace",
-		"Workspaces",
-	)
-	ws = uc.Workspaces
+	uc := models.ResolveUserContext("Workspaces")
 
 	result := []*WorkspacesIndexItemResult{}
-	for _, w := range ws {
+	for _, w := range uc.Workspaces {
 		result = append(result, &WorkspacesIndexItemResult{
 			Name:      w.Name,
 			About:     w.About,

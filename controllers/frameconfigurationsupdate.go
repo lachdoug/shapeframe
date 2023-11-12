@@ -23,11 +23,15 @@ func FrameConfigurationsUpdate(jparams []byte) (jbody []byte, err error) {
 	var vn *app.Validation
 	params := ParamsFor[FrameConfigurationsUpdateParams](jparams)
 
-	uc := models.ResolveUserContext("Workspaces.Frames")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
+	uc := models.ResolveUserContext("Workspaces")
+	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		"Frames",
+	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, params.Frame, "Configuration"); err != nil {
+	if f, err = models.ResolveFrame(uc, w, params.Frame,
+		"Configuration",
+	); err != nil {
 		return
 	}
 

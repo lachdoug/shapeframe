@@ -3,7 +3,6 @@ package models
 import (
 	"sf/database/queries"
 	"sf/utils"
-	"strings"
 
 	"golang.org/x/exp/slices"
 )
@@ -35,51 +34,71 @@ func (dl *DirectoryLoader) load() (err error) {
 }
 
 func (dl *DirectoryLoader) dependencies() {
-	if slices.Contains(dl.Loads, "Shapers") || slices.Contains(dl.Loads, "Framers") {
+	primaries := primaryLoads(dl.Loads)
+	if slices.Contains(primaries, "Shapers") {
 		dl.Loads = append(dl.Loads,
-			"GitRepo",
+			"Workspace",
+			"GitRepo.Shapers",
 		)
 	}
-	utils.UniqStrings(&dl.Loads)
+	if slices.Contains(primaries, "Framers") {
+		dl.Loads = append(dl.Loads,
+			"Workspace",
+			"GitRepo.Framers",
+		)
+	}
 }
 
 func (dl *DirectoryLoader) settle() {
+	utils.UniqStrings(&dl.Loads)
 	for _, load := range dl.Loads {
-		elem := strings.SplitN(load, ".", 2)
-		switch elem[0] {
+		switch primaryLoad(load) {
 		case "GitRepo":
-			dl.GitRepo = true
+			abstractAssociation(load, "GitRepo", &dl.GitRepo, &dl.GitRepoLoads)
 		case "Shapers":
-			dl.Shapers = true
-			dl.GitRepoLoads = append(dl.GitRepoLoads, "Shapers")
+			abstractAssociation(load, "Shapers", &dl.Shapers)
 		case "Framers":
-			dl.Framers = true
-			dl.GitRepoLoads = append(dl.GitRepoLoads, "Framers")
+			abstractAssociation(load, "Framers", &dl.Framers)
 		default:
 			dl.Preloads = append(dl.Preloads, load)
 		}
 	}
-	utils.UniqStrings(&dl.Preloads)
 }
 
 func (dl *DirectoryLoader) query() {
+	utils.UniqStrings(&dl.Preloads)
 	queries.Load(dl.Directory, dl.Directory.ID, dl.Preloads...)
 }
 
 func (dl *DirectoryLoader) assign() (err error) {
+	if err = dl.LoadGitRepo(); err != nil {
+		return
+	}
+	dl.LoadShapers()
+	dl.LoadFramers()
+	return
+}
+
+func (dl *DirectoryLoader) LoadGitRepo() (err error) {
 	if dl.GitRepo {
 		dl.SetGitRepo()
 		if err = dl.Directory.GitRepo.Load(dl.GitRepoLoads...); err != nil {
 			return
 		}
 	}
+	return
+}
+
+func (dl *DirectoryLoader) LoadShapers() {
 	if dl.Shapers {
 		dl.SetShapers()
 	}
+}
+
+func (dl *DirectoryLoader) LoadFramers() {
 	if dl.Framers {
 		dl.SetFramers()
 	}
-	return
 }
 
 func (dl *DirectoryLoader) SetGitRepo() {

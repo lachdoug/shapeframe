@@ -20,10 +20,11 @@ func FramesDestroy(jparams []byte) (jbody []byte, err error) {
 	params := ParamsFor[FramesDestroyParams](jparams)
 
 	uc := models.ResolveUserContext(
-		"Frame", "Shape",
-		"Workspaces.Frames",
+		"Workspaces", "Frame", "Shape",
 	)
-	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
+	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		"Frames",
+	); err != nil {
 		return
 	}
 	if f, err = models.ResolveFrame(uc, w, params.Frame); err != nil {

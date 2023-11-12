@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 )
 
-func GitRepoDirs(dirPath string) (gitRepoDirs []string) {
+func GitDirs(dirPath string) (gitRepoDirs []string) {
 	gitRepoDirs = []string{}
 	var walker fs.WalkDirFunc = func(path string, d fs.DirEntry, err error) error {
 		if err != nil {

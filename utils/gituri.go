@@ -4,9 +4,9 @@ import (
 	"strings"
 )
 
-func GitRepoURI(dirPath string) (uri string, err error) {
+func GitURI(dirPath string) (uri string, err error) {
 	var url string
-	if url, err = GitRepoURL(dirPath); err != nil {
+	if url, err = GitURL(dirPath); err != nil {
 		return
 	}
 	if url[0:4] == "git@" {

@@ -5,7 +5,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
-func GitRemotePull(dirPath string, username string, password string, st *Stream) {
+func GitPull(dirPath string, username string, password string, st *Stream) {
 	defer st.Close()
 	var gr *git.Repository
 	var gw *git.Worktree

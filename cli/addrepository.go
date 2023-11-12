@@ -70,6 +70,8 @@ func addRepositoryViewer(body map[string]any) (output string, err error) {
 	var r *models.Repository
 	var gri *models.GitRepoInspector
 	result := resultItem(body)
+	workspace := result["Workspace"].(string)
+	uri := result["URI"].(string)
 
 	// Stream clone output
 	app.Printf("Clone %s\n", result["URL"])
@@ -79,13 +81,12 @@ func addRepositoryViewer(body map[string]any) (output string, err error) {
 
 	// If clone is successful, show repository contents using GitRepo inspection
 	uc := models.ResolveUserContext("Workspaces")
-	if w, err = models.ResolveWorkspace(uc, result["Workspace"].(string), "Repositories"); err != nil {
+	if w, err = models.ResolveWorkspace(uc, workspace, "Repositories"); err != nil {
 		return
 	}
-	if r, err = models.ResolveRepository(w, result["URI"].(string)); err != nil {
-		return
-	}
-	if err = r.Load("Shapers", "Framers"); err != nil {
+	if r, err = models.ResolveRepository(w, uri,
+		"Shapers", "Framers",
+	); err != nil {
 		return
 	}
 

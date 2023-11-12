@@ -52,7 +52,7 @@ func (sr *Shaper) Inspect() (sri *ShaperInspector) {
 
 func (sr *Shaper) URI() (uri string, err error) {
 	var gruri string
-	if gruri, err = utils.GitRepoURI(sr.Path); err != nil {
+	if gruri, err = utils.GitURI(sr.Path); err != nil {
 		err = app.ErrorWrapf(err, "shaper URI")
 		return
 	}

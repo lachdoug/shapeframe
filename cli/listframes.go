@@ -38,8 +38,7 @@ func listFramesParams(context *cliapp.Context) (jparams []byte, err error) {
 
 	if !all {
 		uc := models.ResolveUserContext(
-			"Workspace",
-			"Workspaces",
+			"Workspaces", "Workspace",
 		)
 		if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
 			return

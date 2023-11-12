@@ -2,7 +2,6 @@ package models
 
 import (
 	"sf/utils"
-	"strings"
 
 	"golang.org/x/exp/slices"
 )
@@ -14,7 +13,6 @@ type RepositoryLoader struct {
 	Shapers      bool
 	Framers      bool
 	GitRepoLoads []string
-	Preloads     []string
 }
 
 func NewRepositoryLoader(w *Repository, loads []string) (rl *RepositoryLoader) {
@@ -33,57 +31,72 @@ func (rl *RepositoryLoader) load() (err error) {
 }
 
 func (rl *RepositoryLoader) dependencies() {
-	if slices.Contains(rl.Loads, "Shapers") || slices.Contains(rl.Loads, "Framers") {
+	primaries := primaryLoads(rl.Loads)
+	if slices.Contains(primaries, "Shapers") {
 		rl.Loads = append(rl.Loads,
-			"GitRepo",
+			"GitRepo.Shapers",
 		)
 	}
-	utils.UniqStrings(&rl.Loads)
+	if slices.Contains(rl.Loads, "Framers") {
+		rl.Loads = append(rl.Loads,
+			"GitRepo.Framers",
+		)
+	}
 }
 
 func (rl *RepositoryLoader) settle() {
+	utils.UniqStrings(&rl.Loads)
 	for _, load := range rl.Loads {
-		elem := strings.SplitN(load, ".", 2)
-		switch elem[0] {
+		switch primaryLoad(load) {
 		case "GitRepo":
-			rl.GitRepo = true
+			abstractAssociation(load, "GitRepo", &rl.GitRepo, &rl.GitRepoLoads)
 		case "Shapers":
-			rl.Shapers = true
-			rl.GitRepoLoads = append(rl.GitRepoLoads, "Shapers")
+			abstractAssociation(load, "Shapers", &rl.Shapers)
 		case "Framers":
-			rl.Framers = true
-			rl.GitRepoLoads = append(rl.GitRepoLoads, "Framers")
-		default:
-			rl.Preloads = append(rl.Preloads, load)
+			abstractAssociation(load, "Framers", &rl.Framers)
 		}
 	}
-	utils.UniqStrings(&rl.Preloads)
 }
 
 func (rl *RepositoryLoader) assign() (err error) {
+	if err = rl.loadGitRepo(); err != nil {
+		return
+	}
+	rl.loadShapers()
+	rl.loadFramers()
+	return
+}
+
+func (rl *RepositoryLoader) loadGitRepo() (err error) {
 	if rl.GitRepo {
-		rl.SetGitRepo()
+		rl.setGitRepo()
 		if err = rl.Repository.GitRepo.Load(rl.GitRepoLoads...); err != nil {
 			return
 		}
 	}
-	if rl.Shapers {
-		rl.SetShapers()
-	}
-	if rl.Framers {
-		rl.SetFramers()
-	}
 	return
 }
 
-func (rl *RepositoryLoader) SetGitRepo() {
+func (rl *RepositoryLoader) loadShapers() {
+	if rl.Shapers {
+		rl.setShapers()
+	}
+}
+
+func (rl *RepositoryLoader) loadFramers() {
+	if rl.Framers {
+		rl.setFramers()
+	}
+}
+
+func (rl *RepositoryLoader) setGitRepo() {
 	rl.Repository.GitRepo = NewGitRepo(rl.Repository.Workspace, rl.Repository.directory())
 }
 
-func (rl *RepositoryLoader) SetFramers() {
+func (rl *RepositoryLoader) setFramers() {
 	rl.Repository.Framers = rl.Repository.GitRepo.Framers
 }
 
-func (rl *RepositoryLoader) SetShapers() {
+func (rl *RepositoryLoader) setShapers() {
 	rl.Repository.Shapers = rl.Repository.GitRepo.Shapers
 }

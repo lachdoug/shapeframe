@@ -10,8 +10,8 @@ type RepositoriesDestroyParams struct {
 }
 
 type RepositoriesDestroyResult struct {
-	URI       string
 	Workspace string
+	URI       string
 }
 
 func RepositoriesDestroy(jparams []byte) (jbody []byte, err error) {
@@ -20,10 +20,14 @@ func RepositoriesDestroy(jparams []byte) (jbody []byte, err error) {
 	params := ParamsFor[RepositoriesDestroyParams](jparams)
 
 	uc := models.ResolveUserContext("Workspaces")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace, "Repositories"); err != nil {
+	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		"Repositories",
+	); err != nil {
 		return
 	}
-	if r, err = models.ResolveRepository(w, params.URI, "GitRepo"); err != nil {
+	if r, err = models.ResolveRepository(w, params.URI,
+		"GitRepo",
+	); err != nil {
 		return
 	}
 	r.Destroy()

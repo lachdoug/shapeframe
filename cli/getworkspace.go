@@ -33,8 +33,7 @@ func getWorkspaceParams(context *cliapp.Context) (jparams []byte, err error) {
 	workspace := context.Argument(0)
 
 	uc := models.ResolveUserContext(
-		"Workspace",
-		"Workspaces",
+		"Workspaces", "Workspace",
 	)
 	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
 		return

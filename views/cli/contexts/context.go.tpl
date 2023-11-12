@@ -1,5 +1,6 @@
 {{ define "contexts/context" -}}
-Context:{{ if not (.Workspace) }} <none>{{ else }}
+Context:{{ if not (.Workspace) }} <none>
+{{ else }}
   Workspace: {{ .Workspace -}}
 {{ if .Frame }}
   Frame: {{ .Frame -}}

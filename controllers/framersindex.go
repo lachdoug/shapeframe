@@ -19,8 +19,7 @@ func FramersIndex(jparams []byte) (jbody []byte, err error) {
 	params := ParamsFor[FramersIndexParams](jparams)
 
 	uc := models.ResolveUserContext(
-		"Workspace",
-		"Workspaces",
+		"Workspaces", "Workspace",
 	)
 	if params.Workspace == "" {
 		for _, w := range uc.Workspaces {
@@ -31,10 +30,9 @@ func FramersIndex(jparams []byte) (jbody []byte, err error) {
 		}
 	} else {
 		var w *models.Workspace
-		if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
-			return
-		}
-		if err = w.Load("Framers"); err != nil {
+		if w, err = models.ResolveWorkspace(uc, params.Workspace,
+			"Framers",
+		); err != nil {
 			return
 		}
 		frs = w.Framers

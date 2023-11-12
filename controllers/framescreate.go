@@ -23,8 +23,10 @@ func FramesCreate(jparams []byte) (jbody []byte, err error) {
 	var vn *app.Validation
 	params := ParamsFor[FramesCreateParams](jparams)
 
-	uc := models.ResolveUserContext("Workspaces.Frames")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace, "Framers"); err != nil {
+	uc := models.ResolveUserContext("Workspaces")
+	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		"Frames", "Framers",
+	); err != nil {
 		return
 	}
 	if f, vn, err = models.CreateFrame(w, params.Framer, params.Name, params.About); err != nil {

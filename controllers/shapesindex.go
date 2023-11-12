@@ -22,18 +22,20 @@ func ShapesIndex(jparams []byte) (jbody []byte, err error) {
 	params := ParamsFor[ShapesIndexParams](jparams)
 
 	uc := models.ResolveUserContext(
-		"Workspace.Frames.Shapes.Frame.Workspace",
-		"Workspaces.Frames.Shapes.Frame.Workspace",
+		"Workspaces", "Workspace",
 	)
 	if params.Workspace == "" {
 		for _, w := range uc.Workspaces {
+			w.Load("Frames.Shapes.Frame.Workspace")
 			for _, f := range w.Frames {
 				ss = append(ss, f.Shapes...)
 			}
 		}
 	} else {
 		var w *models.Workspace
-		if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
+		if w, err = models.ResolveWorkspace(uc, params.Workspace,
+			"Frames.Shapes.Frame.Workspace",
+		); err != nil {
 			return
 		}
 		for _, f := range w.Frames {

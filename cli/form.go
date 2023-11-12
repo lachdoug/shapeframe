@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"sf/cli/prompting"
 	"sf/models"
 )
 
@@ -30,7 +31,7 @@ func (cf *Form) prompts() (answers map[string]any, err error) {
 func (cf *Form) prompt(control *FormControl) (answer string, err error) {
 	suggest := control.Value
 	question := control.Label
-	answer, err = prompt(question+"?", suggest)
+	answer, err = prompting.Prompt(question+"?", suggest)
 	return
 }
 

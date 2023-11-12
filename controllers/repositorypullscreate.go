@@ -13,9 +13,9 @@ type RepositoryPullsCreateParams struct {
 }
 
 type RepositoryPullsCreateResult struct {
+	Workspace string
 	URI       string
 	URL       string
-	Workspace string
 }
 
 func RepositoryPullsCreate(jparams []byte) (jbody []byte, err error) {
@@ -26,10 +26,14 @@ func RepositoryPullsCreate(jparams []byte) (jbody []byte, err error) {
 	st := utils.StreamCreate()
 
 	uc := models.ResolveUserContext("Workspaces")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace, "Repositories"); err != nil {
+	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		"Repositories",
+	); err != nil {
 		return
 	}
-	if r, err = models.ResolveRepository(w, params.URI, "GitRepo"); err != nil {
+	if r, err = models.ResolveRepository(w, params.URI,
+		"GitRepo",
+	); err != nil {
 		return
 	}
 	r.Update(params.Username, params.Password, st)

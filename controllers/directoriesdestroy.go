@@ -25,8 +25,10 @@ func DirectoriesDestroy(jparams []byte) (jbody []byte, err error) {
 		return
 	}
 
-	uc := models.ResolveUserContext("Workspaces.Directories")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
+	uc := models.ResolveUserContext("Workspaces")
+	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		"Directories",
+	); err != nil {
 		return
 	}
 	if d, err = models.ResolveDirectory(w, path); err != nil {

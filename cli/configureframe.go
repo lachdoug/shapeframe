@@ -45,14 +45,16 @@ func configureFrameParams(context *cliapp.Context) (jparams []byte, err error) {
 	values := context.Arguments()
 
 	uc := models.ResolveUserContext(
-		"Frame",
-		"Workspace.Frames",
-		"Workspaces.Frames",
+		"Workspaces", "Workspace", "Frame",
 	)
-	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
+	if w, err = models.ResolveWorkspace(uc, workspace,
+		"Frames",
+	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, frame, "Configuration"); err != nil {
+	if f, err = models.ResolveFrame(uc, w, frame,
+		"Configuration",
+	); err != nil {
 		return
 	}
 

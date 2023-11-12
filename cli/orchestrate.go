@@ -37,11 +37,11 @@ func orchestrateParams(context *cliapp.Context) (jparams []byte, err error) {
 	frame := context.StringFlag("frame")
 
 	uc := models.ResolveUserContext(
-		"Frame",
-		"Workspace.Frames",
-		"Workspaces.Frames",
+		"Workspaces", "Workspace", "Frame",
 	)
-	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
+	if w, err = models.ResolveWorkspace(uc, workspace,
+		"Frames",
+	); err != nil {
 		return
 	}
 	if f, err = models.ResolveFrame(uc, w, frame); err != nil {

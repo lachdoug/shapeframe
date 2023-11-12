@@ -26,14 +26,20 @@ func ShapeConfigurationsUpdate(jparams []byte) (jbody []byte, err error) {
 	var vn *app.Validation
 	params := ParamsFor[ShapeConfigurationsUpdateParams](jparams)
 
-	uc := models.ResolveUserContext("Workspaces.Frames.Shapes")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
+	uc := models.ResolveUserContext("Workspaces")
+	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		"Frames",
+	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, params.Frame); err != nil {
+	if f, err = models.ResolveFrame(uc, w, params.Frame,
+		"Shapes",
+	); err != nil {
 		return
 	}
-	if s, err = models.ResolveShape(uc, f, params.Shape, "Configuration"); err != nil {
+	if s, err = models.ResolveShape(uc, f, params.Shape,
+		"Configuration",
+	); err != nil {
 		return
 	}
 

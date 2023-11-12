@@ -1,13 +1,11 @@
 package cli
 
 import (
-	"fmt"
 	"sf/app"
 	"sf/cli/cliapp"
+	"sf/cli/prompting"
 	"sf/controllers"
 	"sf/models"
-	"strconv"
-	"strings"
 )
 
 func pull() (command any) {
@@ -51,7 +49,7 @@ func pullParams(context *cliapp.Context) (jparams []byte, err error) {
 	}
 
 	if uri == "" {
-		if uri, err = pullPrompt(w); err != nil {
+		if uri, err = prompting.RepositoryURI(w); err != nil {
 			return
 		}
 	}
@@ -62,33 +60,6 @@ func pullParams(context *cliapp.Context) (jparams []byte, err error) {
 		"Username":  username,
 		"Password":  password,
 	})
-	return
-}
-
-func pullPrompt(w *models.Workspace) (uri string, err error) {
-	rs := w.Repositories
-	if len(rs) == 0 {
-		err = app.Error("no repositories in workspace")
-		return
-	}
-	list := ""
-	uris := []string{}
-	for i, r := range rs {
-		uris = append(uris, r.URI)
-		list = list + fmt.Sprintf("%d. %s\n", i+1, r.URI)
-	}
-	app.Printf(list)
-	s, err := prompt("Which repository?")
-	if err != nil {
-		return
-	}
-	i, err := strconv.Atoi(strings.TrimSpace(s))
-	if err == nil && i <= len(rs) {
-		uri = uris[i-1]
-	} else {
-		err = app.Error("invalid: %s", s)
-		return
-	}
 	return
 }
 

@@ -6,7 +6,6 @@ import (
 	"sf/utils"
 
 	"github.com/fatih/color"
-	"github.com/peterh/liner"
 )
 
 // Marshal a params map as JSON
@@ -41,25 +40,6 @@ func stream(body map[string]any) (err error) {
 		err = app.ErrorWrap(err)
 		return
 	}
-	return
-}
-
-// Render a question and prompt for an answer
-func prompt(question string, opts ...string) (answer string, err error) {
-	line := liner.NewLiner()
-	defer func() {
-		if err = line.Close(); err != nil {
-			panic(err)
-		}
-	}()
-	line.SetCtrlCAborts(true)
-
-	suggest := ""
-	if len(opts) > 0 {
-		suggest = opts[0]
-	}
-
-	answer, err = line.PromptWithSuggestion(question+" ", suggest, -1)
 	return
 }
 

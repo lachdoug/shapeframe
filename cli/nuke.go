@@ -3,8 +3,8 @@ package cli
 import (
 	"os"
 	"sf/cli/cliapp"
+	"sf/cli/prompting"
 	"sf/controllers"
-	"strings"
 )
 
 func nuke() (command any) {
@@ -28,19 +28,14 @@ func nuke() (command any) {
 }
 
 func nukeParams(context *cliapp.Context) (jparams []byte, err error) {
+	var confirmed bool
 	if !context.BoolFlag("confirm") {
-		err = nukePrompt()
-	}
-	return
-}
-
-func nukePrompt() (err error) {
-	s, err := prompt("Are you sure that you want to destroy existing data? (Y/n)")
-	if err != nil {
-		return
-	}
-	if answer := strings.TrimSpace(s); answer != "Y" {
-		os.Exit(0)
+		confirmed, err = prompting.Confirmation(
+			"Are you sure that you want to destroy existing data?",
+		)
+		if !confirmed {
+			os.Exit(0)
+		}
 	}
 	return
 }

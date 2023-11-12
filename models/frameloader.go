@@ -4,9 +4,7 @@ import (
 	"sf/app"
 	"sf/database/queries"
 	"sf/utils"
-	"strings"
-
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 type FrameLoader struct {
@@ -14,9 +12,9 @@ type FrameLoader struct {
 	Loads              []string
 	Framer             bool
 	Configuration      bool
-	ConfigurationLoads []string
-	ShapeLoads         []string
 	WorkspaceLoads     []string
+	ShapeLoads         []string
+	ConfigurationLoads []string
 	Preloads           []string
 }
 
@@ -32,92 +30,100 @@ func (fl *FrameLoader) load() (err error) {
 	fl.dependencies()
 	fl.settle()
 	fl.query()
-	if err = fl.assign(); err != nil {
+	err = fl.assign()
+	return
+}
+
+func (fl *FrameLoader) dependencies() {
+	primaries := primaryLoads(fl.Loads)
+	if slices.Contains(primaries, "Configuration") {
+		fl.Loads = append(fl.Loads,
+			"Workspace.Framers",
+			"Framer",
+			"Configuration.Form",
+		)
+	}
+	if slices.Contains(primaries, "Framer") {
+		fl.Loads = append(fl.Loads,
+			"Workspace.Framers",
+		)
+	}
+}
+
+func (fl *FrameLoader) settle() {
+	utils.UniqStrings(&fl.Loads)
+	for _, load := range fl.Loads {
+		switch primaryLoad(load) {
+		case "Shapes":
+			databaseAssociation(load, "Shapes", &fl.Preloads, &fl.ShapeLoads)
+		case "Framer":
+			abstractAssociation(load, "Framer", &fl.Framer)
+		case "Configuration":
+			abstractAssociation(load, "Configuration", &fl.Configuration, &fl.ConfigurationLoads)
+		case "Workspace":
+			databaseAssociation(load, "Workspace", &fl.Preloads, &fl.WorkspaceLoads)
+		default:
+			fl.Preloads = append(fl.Preloads, load)
+		}
+	}
+}
+
+func (fl *FrameLoader) query() {
+	if len(fl.Preloads) > 0 {
+		utils.UniqStrings(&fl.Preloads)
+		queries.Load(fl.Frame, fl.Frame.ID, fl.Preloads...)
+	}
+}
+
+func (fl *FrameLoader) assign() (err error) {
+	if err = fl.loadWorkspace(); err != nil {
+		return
+	}
+	if err = fl.loadShapes(); err != nil {
+		return
+	}
+	if err = fl.loadFramer(); err != nil {
+		return
+	}
+	if err = fl.loadConfiguration(); err != nil {
 		return
 	}
 	return
 }
 
-func (fl *FrameLoader) dependencies() {
-	if slices.Contains(fl.Loads, "Configuration") {
-		fl.Loads = append(fl.Loads,
-			"Framer",
-			"Configuration.Form",
-		)
-	}
-	if slices.Contains(fl.Loads, "Framer") {
-		fl.Loads = append(fl.Loads,
-			"Workspace.Framers",
-		)
-	}
-	utils.UniqStrings(&fl.Loads)
-}
-
-func (fl *FrameLoader) settle() {
-	for _, load := range fl.Loads {
-		elem := strings.SplitN(load, ".", 2)
-		switch elem[0] {
-		case "Shapes":
-			fl.Preloads = append(fl.Preloads, "Shapes")
-			if len(elem) > 1 {
-				switch elem[1] {
-				case "Configuration":
-					fl.ShapeLoads = append(fl.ShapeLoads, elem[1])
-				default:
-					fl.Preloads = append(fl.Preloads, load)
-				}
-			}
-		case "Framer":
-			fl.Framer = true
-		case "Configuration":
-			fl.Configuration = true
-			if len(elem) > 1 {
-				fl.ConfigurationLoads = append(fl.ConfigurationLoads, elem[1])
-			}
-		case "Workspace":
-			fl.Preloads = append(fl.Preloads, "Workspace")
-			if len(elem) > 1 {
-				switch elem[1] {
-				case "Shapers", "Framers":
-					fl.WorkspaceLoads = append(fl.WorkspaceLoads, elem[1])
-				default:
-					fl.Preloads = append(fl.Preloads, load)
-				}
-			}
-		default:
-			fl.Preloads = append(fl.Preloads, load)
-		}
-	}
-	utils.UniqStrings(&fl.Preloads)
-}
-
-func (fl *FrameLoader) query() {
-	queries.Load(fl.Frame, fl.Frame.ID, fl.Preloads...)
-}
-
-func (fl *FrameLoader) assign() (err error) {
+func (fl *FrameLoader) loadWorkspace() (err error) {
 	if len(fl.WorkspaceLoads) > 0 {
-		if err = fl.LoadWorkspace(); err != nil {
-			return
-		}
+		err = fl.Frame.Workspace.Load(fl.WorkspaceLoads...)
 	}
+	return
+}
+
+func (fl *FrameLoader) loadShapes() (err error) {
 	if len(fl.ShapeLoads) > 0 {
-		if err = fl.LoadShapes(); err != nil {
-			return
+		for _, s := range fl.Frame.Shapes {
+			if err = s.Load(fl.ShapeLoads...); err != nil {
+				return
+			}
 		}
 	}
+	return
+}
+
+func (fl *FrameLoader) loadFramer() (err error) {
 	if fl.Framer {
 		if err = fl.SetFramer(); err != nil {
 			return
 		}
 	}
+	return
+}
+
+func (fl *FrameLoader) loadConfiguration() (err error) {
 	if fl.Configuration {
 		if err = fl.SetConfiguration(); err != nil {
 			return
 		}
-		if err = fl.LoadConfiguration(); err != nil {
-			return
-		}
+		err = fl.Frame.Configuration.Load(fl.ConfigurationLoads...)
 	}
 	return
 }
@@ -147,24 +153,5 @@ func (fl *FrameLoader) SetFramer() (err error) {
 		return
 	}
 	fl.Frame.Framer = framer
-	return
-}
-
-func (fl *FrameLoader) LoadWorkspace() (err error) {
-	err = fl.Frame.Workspace.Load(fl.WorkspaceLoads...)
-	return
-}
-
-func (fl *FrameLoader) LoadShapes() (err error) {
-	for _, d := range fl.Frame.Shapes {
-		if err = d.Load(fl.ShapeLoads...); err != nil {
-			return
-		}
-	}
-	return
-}
-
-func (fl *FrameLoader) LoadConfiguration() (err error) {
-	err = fl.Frame.Configuration.Load(fl.ConfigurationLoads...)
 	return
 }

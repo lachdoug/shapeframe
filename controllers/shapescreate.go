@@ -27,13 +27,16 @@ func ShapesCreate(jparams []byte) (jbody []byte, err error) {
 	params := ParamsFor[ShapesCreateParams](jparams)
 
 	uc := models.ResolveUserContext(
-		"Workspace.Frames.Shapes",
-		"Workspaces.Frames.Shapes",
+		"Workspaces", "Workspace",
 	)
-	if w, err = models.ResolveWorkspace(uc, params.Workspace, "Shapers"); err != nil {
+	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		"Frames",
+	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, params.Frame); err != nil {
+	if f, err = models.ResolveFrame(uc, w, params.Frame,
+		"Shapes", "Workspace.Shapers",
+	); err != nil {
 		return
 	}
 	if s, vn, err = models.CreateShape(f, params.Shaper, params.Name, params.About); err != nil {

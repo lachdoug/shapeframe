@@ -5,7 +5,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
-func GitRemoteClone(dirPath string, url string, username string, password string, st *Stream) {
+func GitClone(dirPath string, url string, username string, password string, st *Stream) {
 	defer st.Close()
 	var err error
 	tmp := TempDir("clone")

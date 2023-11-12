@@ -21,12 +21,15 @@ func FrameOrchestrationsCreate(jparams []byte) (jbody []byte, err error) {
 	params := ParamsFor[FrameOrchestrationsCreateParams](jparams)
 	st := utils.StreamCreate()
 
-	uc := models.ResolveUserContext("Workspaces.Frames")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
+	uc := models.ResolveUserContext("Workspaces")
+	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		"Frames",
+	); err != nil {
 		return
 	}
 	if f, err = models.ResolveFrame(uc, w, params.Frame,
-		"Configuration", "Shapes.Configuration"); err != nil {
+		"Configuration", "Shapes.Configuration",
+	); err != nil {
 		return
 	}
 	f.Orchestrate(st)

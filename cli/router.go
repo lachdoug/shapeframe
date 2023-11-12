@@ -21,6 +21,7 @@ func Router(args []string) {
 			add,
 			remove,
 			pull,
+			// checkout,
 			join,
 			context,
 			orchestrate,

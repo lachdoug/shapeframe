@@ -24,8 +24,10 @@ func FrameJoinsCreate(jparams []byte) (jbody []byte, err error) {
 	var isCircular bool
 	params := ParamsFor[FrameJoinsCreateParams](jparams)
 
-	uc := models.ResolveUserContext("Workspaces.Frames")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
+	uc := models.ResolveUserContext("Workspaces")
+	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		"Frames",
+	); err != nil {
 		return
 	}
 	if fc, err = models.ResolveFrame(uc, w, params.Frame); err != nil {

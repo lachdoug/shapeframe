@@ -17,13 +17,9 @@ func WorkspaceInspectsRead(jparams []byte) (jbody []byte, err error) {
 		"Workspaces",
 	)
 	if w, err = models.ResolveWorkspace(uc, params.Workspace,
-		"Frames.Configuration",
-		"Frames.Shapes.Configuration",
-		"Directories.Workspace",
-		"Directories.Framers",
-		"Directories.Shapers",
-		"Repositories.Framers",
-		"Repositories.Shapers",
+		"Framers", "Shapers",
+		"Frames.Parent", "Frames.Children",
+		"Frames.Configuration", "Frames.Shapes.Configuration",
 	); err != nil {
 		return
 	}

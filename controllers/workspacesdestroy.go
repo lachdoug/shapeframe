@@ -17,8 +17,7 @@ func WorkspacesDestroy(jparams []byte) (jbody []byte, err error) {
 	params := ParamsFor[WorkspacesDestroyParams](jparams)
 
 	uc := models.ResolveUserContext(
-		"Workspace", "Frame", "Shape",
-		"Workspaces",
+		"Workspaces", "Workspace", "Frame", "Shape",
 	)
 	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
 		return

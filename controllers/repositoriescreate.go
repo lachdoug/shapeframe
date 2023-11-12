@@ -15,10 +15,9 @@ type RepositoriesCreateParams struct {
 }
 
 type RepositoriesCreateResult struct {
-	Path      string
+	Workspace string
 	URI       string
 	URL       string
-	Workspace string
 }
 
 func RepositoriesCreate(jparams []byte) (jbody []byte, err error) {
@@ -31,10 +30,19 @@ func RepositoriesCreate(jparams []byte) (jbody []byte, err error) {
 	uc := models.ResolveUserContext(
 		"Workspaces",
 	)
-	if w, err = models.ResolveWorkspace(uc, params.Workspace, "Repositories"); err != nil {
+	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		"Repositories",
+	); err != nil {
 		return
 	}
-	if r, vn, err = models.CreateRepository(w, params.URI, params.Protocol, params.Username, params.Password, st); err != nil {
+	if r, vn, err = models.CreateRepository(
+		w,
+		params.URI,
+		params.Protocol,
+		params.Username,
+		params.Password,
+		st,
+	); err != nil {
 		return
 	}
 

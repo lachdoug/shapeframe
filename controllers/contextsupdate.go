@@ -22,16 +22,15 @@ func ContextsUpdate(jparams []byte) (jbody []byte, err error) {
 	params := ParamsFor[ContextsUpdateParams](jparams)
 
 	uc := models.ResolveUserContext(
-		"Workspace",
-		"Frame",
-		"Shape",
-		"Workspaces.Frames.Shapes",
+		"Workspaces", "Workspace", "Frame", "Shape",
 	)
 
 	result := &ContextsUpdateResult{From: uc.Inspect()}
 
 	if params.Workspace != "" {
-		if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
+		if w, err = models.ResolveWorkspace(uc, params.Workspace,
+			"Frames",
+		); err != nil {
 			return
 		}
 		uc.Workspace = w
@@ -39,7 +38,9 @@ func ContextsUpdate(jparams []byte) (jbody []byte, err error) {
 		uc.Clear("Workspace")
 	}
 	if params.Frame != "" {
-		if f, err = models.ResolveFrame(uc, w, params.Frame); err != nil {
+		if f, err = models.ResolveFrame(uc, w, params.Frame,
+			"Shapes",
+		); err != nil {
 			return
 		}
 		uc.Frame = f

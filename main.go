@@ -40,12 +40,14 @@ func main() {
 
 func arg(i int) (val string) {
 	if app.Debug {
-		i = i + 1
+		i = i + 2 // skip first two args, which are sf -debug
+	} else {
+		i = i + 1 // skip first arg, which is sf
 	}
 	if i >= len(os.Args) {
 		val = ""
 	} else {
-		val = os.Args[i+1]
+		val = os.Args[i]
 	}
 	return
 }

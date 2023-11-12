@@ -4,7 +4,6 @@ import (
 	"sf/app"
 	"sf/database/queries"
 	"sf/utils"
-	"strings"
 
 	"golang.org/x/exp/slices"
 )
@@ -31,79 +30,91 @@ func (sl *ShapeLoader) load() (err error) {
 	sl.dependencies()
 	sl.settle()
 	sl.query()
-	if err = sl.assign(); err != nil {
+	err = sl.assign()
+	return
+}
+
+func (sl *ShapeLoader) dependencies() {
+	primaries := primaryLoads(sl.Loads)
+	if slices.Contains(primaries, "Configuration") {
+		sl.Loads = append(sl.Loads,
+			"Frame.Workspace.Shapers",
+			"Shaper",
+			"Configuration.Form",
+		)
+	}
+	if slices.Contains(primaries, "Shaper") {
+		sl.Loads = append(sl.Loads,
+			"Frame.Workspace.Shapers",
+		)
+	}
+}
+
+func (sl *ShapeLoader) settle() {
+	utils.UniqStrings(&sl.Loads)
+	for _, load := range sl.Loads {
+		switch primaryLoad(load) {
+		case "Shaper":
+			abstractAssociation(load, "Shaper", &sl.Shaper)
+		case "Configuration":
+			abstractAssociation(load, "Configuration", &sl.Configuration, &sl.ConfigurationLoads)
+		case "Frame":
+			databaseAssociation(load, "Frame", &sl.Preloads, &sl.FrameLoads)
+		default:
+			sl.Preloads = append(sl.Preloads, load)
+		}
+	}
+}
+
+func (sl *ShapeLoader) query() {
+	utils.UniqStrings(&sl.Preloads)
+	queries.Load(sl.Shape, sl.Shape.ID, sl.Preloads...)
+}
+
+func (sl *ShapeLoader) assign() (err error) {
+	if err = sl.loadFrame(); err != nil {
+		return
+	}
+	if err = sl.loadShaper(); err != nil {
+		return
+	}
+	if err = sl.loadConfiguration(); err != nil {
 		return
 	}
 	return
 }
 
-func (sl *ShapeLoader) dependencies() {
-	if slices.Contains(sl.Loads, "Configuration") {
-		sl.Loads = append(sl.Loads,
-			"Shaper",
-			"Configuration.Form",
-		)
-	}
-	if slices.Contains(sl.Loads, "Shaper") {
-		sl.Loads = append(sl.Loads,
-			"Frame.Workspace.Shapers",
-		)
-	}
-	utils.UniqStrings(&sl.Loads)
-}
-
-func (sl *ShapeLoader) settle() {
-	for _, load := range sl.Loads {
-		elem := strings.SplitN(load, ".", 2)
-		switch elem[0] {
-		case "Shaper":
-			sl.Shaper = true
-		case "Configuration":
-			sl.Configuration = true
-			if len(elem) > 1 {
-				sl.ConfigurationLoads = append(sl.ConfigurationLoads, elem[1])
-			}
-		case "Frame":
-			sl.Preloads = append(sl.Preloads, "Frame")
-			if len(elem) > 1 {
-				sl.FrameLoads = append(sl.FrameLoads, elem[1])
-			}
-		default:
-			sl.Preloads = append(sl.Preloads, load)
-		}
-	}
-	utils.UniqStrings(&sl.Preloads)
-}
-
-func (sl *ShapeLoader) query() {
-	queries.Load(sl.Shape, sl.Shape.ID, sl.Preloads...)
-}
-
-func (sl *ShapeLoader) assign() (err error) {
+func (sl *ShapeLoader) loadFrame() (err error) {
 	if len(sl.FrameLoads) > 0 {
-		if err = sl.LoadFrame(); err != nil {
-			return
-		}
+		err = sl.Shape.Frame.Load(sl.FrameLoads...)
 	}
+	return
+}
+
+func (sl *ShapeLoader) loadShaper() (err error) {
 	if sl.Shaper {
-		if err = sl.SetShaper(); err != nil {
-			return
-		}
-	}
-	if sl.Configuration {
-		if err = sl.SetConfiguration(); err != nil {
-			return
-		}
-	}
-	if len(sl.ConfigurationLoads) > 0 {
-		if err = sl.LoadConfiguration(); err != nil {
+		if err = sl.setShaper(); err != nil {
 			return
 		}
 	}
 	return
 }
 
-func (sl *ShapeLoader) SetConfiguration() (err error) {
+func (sl *ShapeLoader) loadConfiguration() (err error) {
+	if sl.Configuration {
+		if err = sl.setConfiguration(); err != nil {
+			return
+		}
+		if len(sl.ConfigurationLoads) > 0 {
+			if err = sl.Shape.Configuration.Load(sl.ConfigurationLoads...); err != nil {
+				return
+			}
+		}
+	}
+	return
+}
+
+func (sl *ShapeLoader) setConfiguration() (err error) {
 	c := &Configuration{
 		OwnerID:   sl.Shape.ID,
 		OwnerType: "Shape",
@@ -117,7 +128,7 @@ func (sl *ShapeLoader) SetConfiguration() (err error) {
 	return
 }
 
-func (sl *ShapeLoader) SetShaper() (err error) {
+func (sl *ShapeLoader) setShaper() (err error) {
 	shaper := sl.Shape.Frame.Workspace.FindShaper(sl.Shape.ShaperName)
 	if shaper == nil {
 		err = app.Error(
@@ -128,15 +139,5 @@ func (sl *ShapeLoader) SetShaper() (err error) {
 		return
 	}
 	sl.Shape.Shaper = shaper
-	return
-}
-
-func (sl *ShapeLoader) LoadFrame() (err error) {
-	err = sl.Shape.Frame.Load(sl.FrameLoads...)
-	return
-}
-
-func (sl *ShapeLoader) LoadConfiguration() (err error) {
-	err = sl.Shape.Configuration.Load(sl.ConfigurationLoads...)
 	return
 }

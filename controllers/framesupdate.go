@@ -29,12 +29,16 @@ func FramesUpdate(jparams []byte) (jbody []byte, err error) {
 	params := ParamsFor[FramesUpdateParams](jparams)
 
 	uc := models.ResolveUserContext(
-		"Workspaces.Frames",
+		"Workspaces",
 	)
-	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
+	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		"Frames",
+	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, params.Frame, "Configuration"); err != nil {
+	if f, err = models.ResolveFrame(uc, w, params.Frame,
+		"Configuration",
+	); err != nil {
 		return
 	}
 

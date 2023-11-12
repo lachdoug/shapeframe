@@ -5,17 +5,17 @@ import (
 	"sf/app"
 	"sf/database/queries"
 	"sf/utils"
-	"strings"
-
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 type WorkspaceLoader struct {
 	Workspace       *Workspace
 	Loads           []string
-	Repositories    bool
 	Shapers         bool
 	Framers         bool
+	Repositories    bool
+	ShaperLoads     []string
+	FramerLoads     []string
 	FrameLoads      []string
 	RepositoryLoads []string
 	DirectoryLoads  []string
@@ -39,174 +39,143 @@ func (wl *WorkspaceLoader) load() (err error) {
 }
 
 func (wl *WorkspaceLoader) dependencies() {
-	if slices.Contains(wl.Loads, "Framers") {
+	primaries := primaryLoads(wl.Loads)
+	if slices.Contains(primaries, "Shapers") {
 		wl.Loads = append(wl.Loads,
-			"Directories.Workspace",
-			"Directories.Framers",
-			"Repositories.Framers",
-		)
-	}
-	if slices.Contains(wl.Loads, "Shapers") {
-		wl.Loads = append(wl.Loads,
-			"Directories.Workspace",
-			"Directories.Shapers",
+			"Directories.Shapers.Workspace",
 			"Repositories.Shapers",
 		)
 	}
-	utils.UniqStrings(&wl.Loads)
+	if slices.Contains(primaries, "Framers") {
+		wl.Loads = append(wl.Loads,
+			"Directories.Framers.Workspace",
+			"Repositories.Framers",
+		)
+	}
 }
 
 func (wl *WorkspaceLoader) settle() {
+	utils.UniqStrings(&wl.Loads)
 	for _, load := range wl.Loads {
-		elem := strings.SplitN(load, ".", 2)
-		switch elem[0] {
+		switch primaryLoad(load) {
 		case "Frames":
-			wl.Preloads = append(wl.Preloads, "Frames")
-			if len(elem) > 1 {
-				elem1 := strings.SplitN(elem[1], ".", 2)
-				switch elem1[0] {
-				case "Shapes":
-					wl.Preloads = append(wl.Preloads, "Frames.Shapes")
-					if len(elem1) > 1 {
-						switch elem1[1] {
-						case "Configuration":
-							wl.FrameLoads = append(wl.FrameLoads, "Shapes.Configuration")
-						default:
-							wl.Preloads = append(wl.Preloads, load)
-						}
-					}
-				case "Configuration":
-					wl.FrameLoads = append(wl.FrameLoads, elem1[0])
-				default:
-					wl.Preloads = append(wl.Preloads, load)
-				}
-			}
+			databaseAssociation(load, "Frames", &wl.Preloads, &wl.FrameLoads)
 		case "Shapers":
-			wl.Shapers = true
+			abstractAssociation(load, "Shapers", &wl.Shapers, &wl.ShaperLoads)
 		case "Framers":
-			wl.Framers = true
+			abstractAssociation(load, "Framers", &wl.Framers, &wl.FramerLoads)
 		case "Repositories":
-			wl.Repositories = true
-			if len(elem) > 1 {
-				wl.RepositoryLoads = append(wl.RepositoryLoads, elem[1])
-			}
+			abstractAssociation(load, "Repositories", &wl.Repositories, &wl.RepositoryLoads)
 		case "Directories":
-			wl.Preloads = append(wl.Preloads, "Directories")
-			if len(elem) > 1 {
-				switch elem[1] {
-				case "Shapers", "Framers":
-					wl.DirectoryLoads = append(wl.DirectoryLoads, elem[1])
-				default:
-					wl.Preloads = append(wl.Preloads, load)
-				}
-			}
+			databaseAssociation(load, "Directories", &wl.Preloads, &wl.DirectoryLoads)
 		default:
 			wl.Preloads = append(wl.Preloads, load)
 		}
 	}
-	utils.UniqStrings(&wl.Preloads)
 }
 
 func (wl *WorkspaceLoader) query() {
-	queries.Load(wl.Workspace, wl.Workspace.ID, wl.Preloads...)
+	if len(wl.Preloads) > 0 {
+		utils.UniqStrings(&wl.Preloads)
+		queries.Load(wl.Workspace, wl.Workspace.ID, wl.Preloads...)
+	}
 }
 
 func (wl *WorkspaceLoader) assign() (err error) {
-	if wl.Repositories {
-		if err = wl.SetRepositories(); err != nil {
-			return
-		}
-		if err = wl.LoadRepositories(); err != nil {
-			return
-		}
+	if err = wl.loadRepositories(); err != nil {
+		return
 	}
-	if len(wl.DirectoryLoads) > 0 {
-		if err = wl.LoadDirectories(); err != nil {
-			return
-		}
+	if err = wl.loadDirectories(); err != nil {
+		return
 	}
-	if len(wl.FrameLoads) > 0 {
-		if err = wl.LoadFrames(); err != nil {
-			return
-		}
+	if err = wl.loadShapers(); err != nil {
+		return
 	}
-	if wl.Shapers {
-		wl.SetShapers()
+	if err = wl.loadFramers(); err != nil {
+		return
 	}
-	if wl.Framers {
-		wl.SetFramers()
-	}
-	return
-}
-
-func (wl *WorkspaceLoader) LoadRepositories() (err error) {
-	for _, r := range wl.Workspace.Repositories {
-		if err = r.Load(wl.RepositoryLoads...); err != nil {
-			return
-		}
-	}
-	return
-}
-
-func (wl *WorkspaceLoader) LoadDirectories() (err error) {
-	for _, d := range wl.Workspace.Directories {
-		if err = d.Load(wl.DirectoryLoads...); err != nil {
-			return
-		}
-	}
-	return
-}
-
-func (wl *WorkspaceLoader) LoadFrames() (err error) {
-	for _, d := range wl.Workspace.Frames {
-		if err = d.Load(wl.FrameLoads...); err != nil {
-			return
-		}
-	}
-	return
-}
-
-func (wl *WorkspaceLoader) RepositoryURIs() (dirPaths []string, err error) {
-	if dirPaths, err = utils.GitRepoURIs(filepath.Join(wl.Workspace.directory(), "repos")); err != nil {
-		err = app.ErrorWrapf(err, "repository URIs")
+	if err = wl.loadFrames(); err != nil {
 		return
 	}
 	return
 }
 
-func (wl *WorkspaceLoader) SetRepositories() (err error) {
+func (wl *WorkspaceLoader) loadRepositories() (err error) {
+	if wl.Repositories {
+		if err = wl.setRepositories(); err != nil {
+			return
+		}
+		for _, r := range wl.Workspace.Repositories {
+			if err = r.Load(wl.RepositoryLoads...); err != nil {
+				return
+			}
+		}
+	}
+	return
+}
+
+func (wl *WorkspaceLoader) loadDirectories() (err error) {
+	if len(wl.DirectoryLoads) > 0 {
+		for _, d := range wl.Workspace.Directories {
+			if err = d.Load(wl.DirectoryLoads...); err != nil {
+				return
+			}
+		}
+	}
+	return
+}
+
+func (wl *WorkspaceLoader) loadShapers() (err error) {
+	if wl.Shapers {
+		for _, d := range wl.Workspace.Directories {
+			wl.Workspace.Shapers = append(wl.Workspace.Shapers, d.Shapers...)
+		}
+		for _, r := range wl.Workspace.Repositories {
+			wl.Workspace.Shapers = append(wl.Workspace.Shapers, r.Shapers...)
+		}
+	}
+	return
+}
+
+func (wl *WorkspaceLoader) loadFramers() (err error) {
+	if wl.Framers {
+		for _, d := range wl.Workspace.Directories {
+			wl.Workspace.Framers = append(wl.Workspace.Framers, d.Framers...)
+		}
+		for _, r := range wl.Workspace.Repositories {
+			wl.Workspace.Framers = append(wl.Workspace.Framers, r.Framers...)
+		}
+	}
+	return
+}
+
+func (wl *WorkspaceLoader) loadFrames() (err error) {
+	if len(wl.FrameLoads) > 0 {
+		for _, d := range wl.Workspace.Frames {
+			if err = d.Load(wl.FrameLoads...); err != nil {
+				return
+			}
+		}
+	}
+	return
+}
+
+func (wl *WorkspaceLoader) setRepositories() (err error) {
 	var rus []string
-	if rus, err = wl.RepositoryURIs(); err != nil {
+	if rus, err = wl.repositoryURIs(); err != nil {
 		return
 	}
 	for _, ru := range rus {
-		// var protocol string
-		// if ru[0:4] == "https" {
-		// 	protocol = "HTTPS"
-		// } else {
-		// 	protocol = "SSH"
-
-		// }
 		r := NewRepository(wl.Workspace, ru)
 		wl.Workspace.Repositories = append(wl.Workspace.Repositories, r)
 	}
 	return
 }
 
-func (wl *WorkspaceLoader) SetFramers() {
-	for _, d := range wl.Workspace.Directories {
-		wl.Workspace.Framers = append(wl.Workspace.Framers, d.Framers...)
+func (wl *WorkspaceLoader) repositoryURIs() (dirPaths []string, err error) {
+	if dirPaths, err = utils.GitURIs(filepath.Join(wl.Workspace.directory(), "repos")); err != nil {
+		err = app.ErrorWrapf(err, "repository URIs")
+		return
 	}
-	for _, r := range wl.Workspace.Repositories {
-		wl.Workspace.Framers = append(wl.Workspace.Framers, r.Framers...)
-	}
-}
-
-func (wl *WorkspaceLoader) SetShapers() {
-	for _, d := range wl.Workspace.Directories {
-		wl.Workspace.Shapers = append(wl.Workspace.Shapers, d.Shapers...)
-	}
-	for _, r := range wl.Workspace.Repositories {
-		wl.Workspace.Shapers = append(wl.Workspace.Shapers, r.Shapers...)
-	}
+	return
 }

@@ -12,9 +12,7 @@ func WorkspacesRead(jparams []byte) (jbody []byte, err error) {
 	var w *models.Workspace
 	params := ParamsFor[WorkspacesReadParams](jparams)
 
-	uc := models.ResolveUserContext(
-		"Workspaces",
-	)
+	uc := models.ResolveUserContext("Workspaces")
 	if w, err = models.ResolveWorkspace(uc, params.Workspace,
 		"Frames",
 		"Directories",

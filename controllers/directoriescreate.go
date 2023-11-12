@@ -24,9 +24,11 @@ func DirectoriesCreate(jparams []byte) (jbody []byte, err error) {
 	params := ParamsFor[DirectoriesCreateParams](jparams)
 
 	uc := models.ResolveUserContext(
-		"Workspaces.Directories",
+		"Workspaces",
 	)
-	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
+	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		"Directories",
+	); err != nil {
 		return
 	}
 	if path, err = filepath.Abs(params.Path); err != nil {

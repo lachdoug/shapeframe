@@ -13,6 +13,7 @@ type GitRepo struct {
 }
 
 type GitRepoInspector struct {
+	Path    string
 	URI     string
 	URL     string
 	Branch  string
@@ -46,6 +47,7 @@ func (g *GitRepo) Inspect() (gri *GitRepoInspector, err error) {
 		return
 	}
 	gri = &GitRepoInspector{
+		Path:    g.Path,
 		URI:     uri,
 		URL:     url,
 		Branch:  branch,
@@ -73,6 +75,20 @@ func (g *GitRepo) FramersInspect() (fris []*FramerInspector) {
 	return
 }
 
+// // Read
+
+// func (r *Repository) Read() (rr *RepositoryReader) {
+// 	wi = &RepositoryReader{
+// 		Workspace: r.Workspace.Name,
+// 		URI:       r.URI,
+// 		Branch:    r.Branch(),
+// 		Branches:  r.Branches(),
+// 		Shapers:   r.ShaperNames(),
+// 		Framers:   r.FramerNames(),
+// 	}
+// 	return
+// }
+
 // Data
 
 func (g *GitRepo) isExists() (is bool) {
@@ -91,32 +107,55 @@ func (g *GitRepo) remove() {
 }
 
 func (g *GitRepo) clone(url string, username string, password string, st *utils.Stream) {
-	utils.GitRemoteClone(g.Path, url, username, password, st)
+	utils.GitClone(g.Path, url, username, password, st)
 }
 
 func (g *GitRepo) pull(username string, password string, st *utils.Stream) {
-	utils.GitRemotePull(g.Path, username, password, st)
+	utils.GitPull(g.Path, username, password, st)
 }
 
 // Repo
 
 func (g *GitRepo) URI() (url string, err error) {
-	if url, err = utils.GitRepoURI(g.Path); err != nil {
+	if url, err = utils.GitURI(g.Path); err != nil {
 		err = app.ErrorWrapf(err, "gitrepo uri")
 	}
 	return
 }
 
 func (g *GitRepo) URL() (url string, err error) {
-	if url, err = utils.GitRepoURL(g.Path); err != nil {
+	if url, err = utils.GitURL(g.Path); err != nil {
 		err = app.ErrorWrapf(err, "gitrepo url")
 	}
 	return
 }
 
 func (g *GitRepo) Branch() (branch string, err error) {
-	if branch, err = utils.GitRepoBranch(g.Path); err != nil {
+	if branch, err = utils.GitBranch(g.Path); err != nil {
 		err = app.ErrorWrapf(err, "gitrepo branch")
+	}
+	return
+}
+
+func (g *GitRepo) Branches() (branches []string, err error) {
+	if branches, err = utils.GitBranches(g.Path); err != nil {
+		err = app.ErrorWrapf(err, "gitrepo branches")
+	}
+	return
+}
+
+func (g *GitRepo) FramerNames() (ns []string) {
+	ns = []string{}
+	for _, fr := range g.Framers {
+		ns = append(ns, fr.Name)
+	}
+	return
+}
+
+func (g *GitRepo) ShaperNames() (ns []string) {
+	ns = []string{}
+	for _, sr := range g.Shapers {
+		ns = append(ns, sr.Name)
 	}
 	return
 }
