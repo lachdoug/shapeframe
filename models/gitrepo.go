@@ -75,20 +75,6 @@ func (g *GitRepo) FramersInspect() (fris []*FramerInspector) {
 	return
 }
 
-// // Read
-
-// func (r *Repository) Read() (rr *RepositoryReader) {
-// 	wi = &RepositoryReader{
-// 		Workspace: r.Workspace.Name,
-// 		URI:       r.URI,
-// 		Branch:    r.Branch(),
-// 		Branches:  r.Branches(),
-// 		Shapers:   r.ShaperNames(),
-// 		Framers:   r.FramerNames(),
-// 	}
-// 	return
-// }
-
 // Data
 
 func (g *GitRepo) isExists() (is bool) {
@@ -112,6 +98,11 @@ func (g *GitRepo) clone(url string, username string, password string, st *utils.
 
 func (g *GitRepo) pull(username string, password string, st *utils.Stream) {
 	utils.GitPull(g.Path, username, password, st)
+}
+
+func (g *GitRepo) checkout(branch string) (err error) {
+	err = utils.GitCheckout(g.Path, branch)
+	return
 }
 
 // Repo

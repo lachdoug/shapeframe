@@ -148,6 +148,11 @@ func (r *Repository) Update(username string, password string, st *utils.Stream) 
 	go r.GitRepo.pull(username, password, st)
 }
 
+func (r *Repository) Checkout(branch string) (err error) {
+	err = r.GitRepo.checkout(branch)
+	return
+}
+
 func (r *Repository) Destroy() {
 	r.GitRepo.remove()
 }
