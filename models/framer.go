@@ -1,8 +1,10 @@
 package models
 
 import (
+	"fmt"
 	"path/filepath"
-	"sf/app"
+	"sf/app/errors"
+	"sf/app/validations"
 	"sf/utils"
 )
 
@@ -11,7 +13,8 @@ type Framer struct {
 	Path      string
 	Name      string
 	About     string
-	Config    []map[string]any
+	Frame     []*FormComponent
+	Shape     []*FormComponent
 }
 
 type FramerInspector struct {
@@ -47,33 +50,49 @@ func (fr *Framer) Inspect() (fri *FramerInspector) {
 	return
 }
 
+// Location
+
+func (fr *Framer) directory(subDirs ...string) (dirPath string) {
+	elem := append([]string{fr.Path, "framers", fr.Name}, subDirs...)
+	dirPath = filepath.Join(elem...)
+	return
+}
+
 // Data
 
 func (fr *Framer) URI() (uri string, err error) {
 	var gruri string
 	if gruri, err = utils.GitURI(fr.Path); err != nil {
-		err = app.ErrorWrapf(err, "framer URI")
+		err = errors.ErrorWrap(err, "framer URI")
 		return
 	}
 	uri = gruri + "#" + fr.Name
 	return
 }
 
-func (fr *Framer) directory() (dirPath string) {
-	dirPath = filepath.Join(fr.Path, "framers", fr.Name)
-	return
-}
-
 func (fr *Framer) Load() (err error) {
 	if err = utils.YamlReadFile(fr.directory(), "framer", fr); err != nil {
-		err = app.ErrorWrapf(err, "load framer %s in %s", fr.Name, fr.Path)
+		err = errors.ErrorWrapf(err, "load %s", filepath.Join(fr.Path, fr.Name, "framer.yaml"))
+		return
 	}
+	err = fr.validation()
 	return
 }
 
-// Configuration
-
-func (fr *Framer) configurationFormSchema() (schema *FormSchema) {
-	schema = NewFormSchema("framer", fr.Name, fr.Config)
+func (fr *Framer) validation() (err error) {
+	vn := validations.NewValidation()
+	if fr.About == "" {
+		vn.Add("root", "must have an about")
+	}
+	for i, fmc := range fr.Frame {
+		fmc.validation(fmt.Sprintf("frame %d", i), vn)
+	}
+	for i, fmc := range fr.Shape {
+		fmc.validation(fmt.Sprintf("shape %d", i), vn)
+	}
+	if vn.IsInvalid() {
+		err = errors.ErrorWrapf(errors.ValidationError(vn.Maps()), "framer %s", fr.Name)
+		return
+	}
 	return
 }

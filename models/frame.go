@@ -1,9 +1,13 @@
 package models
 
 import (
-	"sf/app"
+	"fmt"
+	"sf/app/errors"
+	"sf/app/streams"
+	"sf/app/validations"
 	"sf/database/queries"
 	"sf/utils"
+	"strings"
 	"time"
 
 	"gorm.io/plugin/soft_delete"
@@ -31,7 +35,7 @@ type FrameInspector struct {
 	Name          string
 	About         string
 	Framer        string
-	Configuration []map[string]any
+	Configuration []map[string]string
 	Relations     *FrameRelationsInspector
 	Shapes        []*ShapeInspector
 }
@@ -49,8 +53,16 @@ type FrameReader struct {
 	Workspace     string
 	Parent        string
 	Framer        string
-	Configuration []map[string]any
+	Configuration []map[string]string
 	Shapes        []string
+}
+
+type FrameOutput struct {
+	Identifier string
+	Workspace  string
+	Name       string
+	About      string
+	Config     map[string]string
 }
 
 // Construction
@@ -63,9 +75,12 @@ func NewFrame(w *Workspace, name string) (f *Frame) {
 	return
 }
 
-func CreateFrame(w *Workspace, framer string, name string, about string) (f *Frame, vn *app.Validation, err error) {
+func CreateFrame(w *Workspace, framer string, name string, about string) (f *Frame, vn *validations.Validation, err error) {
 	f = NewFrame(w, name)
 	f.FramerName = framer
+	if vn = f.FramerValidation(); vn.IsInvalid() {
+		return
+	}
 	if err = f.Load("Framer"); err != nil {
 		return
 	}
@@ -76,7 +91,7 @@ func CreateFrame(w *Workspace, framer string, name string, about string) (f *Fra
 		f.About = f.Framer.About
 	}
 	if f.IsExists() {
-		err = app.Error("frame %s already exists in workspace %s", name, w.Name)
+		err = errors.Errorf("frame %s already exists in workspace %s", name, w.Name)
 		return
 	}
 	if vn = f.Validation(); vn.IsValid() {
@@ -88,26 +103,26 @@ func CreateFrame(w *Workspace, framer string, name string, about string) (f *Fra
 func ResolveFrame(uc *UserContext, w *Workspace, name string, loads ...string) (f *Frame, err error) {
 	if name == "" {
 		if uc == nil {
-			err = app.Error("no user context")
+			err = errors.Error("no user context")
 			return
 		}
 		f = uc.Frame
 		if f == nil {
-			err = app.Error("no frame context")
+			err = errors.Error("no frame context")
 			return
 		}
 	} else {
 		if w == nil {
-			err = app.Error("no workspace")
+			err = errors.Error("no workspace")
 			return
 		}
 		if len(w.Frames) == 0 {
-			err = app.Error("no frames exist in workspace %s", w.Name)
+			err = errors.Errorf("no frames exist in workspace %s", w.Name)
 			return
 		}
 		f = w.FindFrame(name)
 		if f == nil {
-			err = app.Error("frame %s does not exist in workspace %s", name, w.Name)
+			err = errors.Errorf("frame %s does not exist in workspace %s", name, w.Name)
 			return
 		}
 	}
@@ -116,6 +131,17 @@ func ResolveFrame(uc *UserContext, w *Workspace, name string, loads ...string) (
 			return
 		}
 	}
+	return
+}
+
+// Identification
+
+func (f *Frame) identifier() (iden string) {
+	iden = strings.ToLower(fmt.Sprintf(
+		"%s.%s",
+		f.Name,
+		f.Workspace.Name,
+	))
 	return
 }
 
@@ -130,7 +156,7 @@ func (f *Frame) Inspect() (fi *FrameInspector, err error) {
 		Name:          f.Name,
 		About:         f.About,
 		Framer:        f.FramerName,
-		Configuration: f.Configuration.Details(),
+		Configuration: f.Configuration.Info(),
 		Relations:     ri,
 		Shapes:        f.ShapesInspect(),
 	}
@@ -165,14 +191,14 @@ func (f *Frame) ShapesInspect() (sis []*ShapeInspector) {
 
 // Read
 
-func (f *Frame) Read() (fi *FrameReader) {
-	fi = &FrameReader{
+func (f *Frame) Read() (fr *FrameReader) {
+	fr = &FrameReader{
 		Name:          f.Name,
 		About:         f.About,
 		Workspace:     f.Workspace.Name,
 		Parent:        f.ParentName(),
 		Framer:        f.FramerName,
-		Configuration: f.Configuration.Details(),
+		Configuration: f.Configuration.Info(),
 		Shapes:        f.ShapeNames(),
 	}
 	return
@@ -203,11 +229,16 @@ func (f *Frame) Assign(params map[string]any) {
 	}
 }
 
-func (f *Frame) Validation() (vn *app.Validation) {
-	vn = &app.Validation{}
+func (f *Frame) FramerValidation() (vn *validations.Validation) {
+	vn = validations.NewValidation()
 	if f.FramerName == "" {
 		vn.Add("Framer", "must not be blank")
 	}
+	return
+}
+
+func (f *Frame) Validation() (vn *validations.Validation) {
+	vn = validations.NewValidation()
 	if f.Name == "" {
 		vn.Add("Name", "must not be blank")
 	}
@@ -217,19 +248,34 @@ func (f *Frame) Validation() (vn *app.Validation) {
 	return
 }
 
+func (f *Frame) Update(updates map[string]any) (vn *validations.Validation) {
+	f.Assign(updates)
+	if vn = f.Validation(); vn.IsValid() {
+		f.Save()
+	}
+	return
+}
+
+// Record
+
 func (f *Frame) Save() {
 	queries.Save(f)
 }
 
-func (f *Frame) Destroy() {
+func (f *Frame) Delete() {
 	queries.Delete(f)
 }
 
-// Orchestration
+// Composition
 
-func (f *Frame) Orchestrate(st *utils.Stream) {
-	o := NewOrchestration(f, st)
+func (f *Frame) Apply(st *streams.Stream) {
+	o := NewComposition(f, st)
 	go o.apply()
+}
+
+func (f *Frame) Destroy(st *streams.Stream) {
+	o := NewComposition(f, st)
+	go o.destroy()
 }
 
 // Associations
@@ -340,19 +386,15 @@ func (f *Frame) Descendents() (ds []*Frame, err error) {
 	return
 }
 
-// Configuration
+// Output
 
-func (f *Frame) configurationFormSchema() (schema *FormSchema) {
-	schema = f.Framer.configurationFormSchema()
-	return
-}
-
-func (f *Frame) readID() (id uint) {
-	id = f.ID
-	return
-}
-
-func (f *Frame) readType() (t string) {
-	t = "Frame"
+func (f *Frame) Output() (o *FrameOutput) {
+	o = &FrameOutput{
+		Identifier: f.identifier(),
+		Workspace:  f.Workspace.Name,
+		Name:       f.Name,
+		About:      f.About,
+		Config:     f.Configuration.Settings,
+	}
 	return
 }

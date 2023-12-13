@@ -19,20 +19,34 @@ func listWorkspaces() (command any) {
 	return
 }
 
-func listWorkspacesViewer(body map[string]any) (output string, err error) {
+func listWorkspacesViewer(result *controllers.Result) (output string, err error) {
+	rs := result.Payload.([]*controllers.WorkspacesIndexItemResult)
+	items := []map[string]any{}
+	for _, r := range rs {
+		items = append(items, map[string]any{
+			"Workspace": r.Workspace,
+			"About":     r.About,
+			"IsContext": r.IsContext,
+		})
+	}
+
 	table := &Table{
-		Items:  resultItems(body),
+		Items:  items,
 		Titles: ss("WORKSPACE", "ABOUT"),
-		Keys:   ss("Name", "About"),
-		Values: tvs(
-			tableCellStringValueFn,
-			tableCellStringValueFn,
-		),
+		Keys:   ss("Workspace", "About"),
+		// Values: tvs(
+		// 	tableCellStringValueFn,
+		// 	tableCellStringValueFn,
+		// ),
 		Accents: tas(
 			tableCellGreenIfInContextAccentFn,
 			tableCellNoAccentFn,
 		),
 	}
-	output, err = cliapp.View("workspaces/index")(table.generate())
+
+	result = &controllers.Result{
+		Payload: table.generate(),
+	}
+	output, err = cliapp.View("workspaces/index")(result)
 	return
 }

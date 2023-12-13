@@ -8,15 +8,15 @@ type WorkspaceInspectsReadParams struct {
 	Workspace string
 }
 
-func WorkspaceInspectsRead(jparams []byte) (jbody []byte, err error) {
+func WorkspaceInspectsRead(params *Params) (result *Result, err error) {
 	var w *models.Workspace
 	var wi *models.WorkspaceInspector
-	params := ParamsFor[WorkspaceInspectsReadParams](jparams)
+	p := params.Payload.(*WorkspaceInspectsReadParams)
 
 	uc := models.ResolveUserContext(
-		"Workspaces",
+		"Workspaces", "Workspace",
 	)
-	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+	if w, err = models.ResolveWorkspace(uc, p.Workspace,
 		"Framers", "Shapers",
 		"Frames.Parent", "Frames.Children",
 		"Frames.Configuration", "Frames.Shapes.Configuration",
@@ -28,6 +28,8 @@ func WorkspaceInspectsRead(jparams []byte) (jbody []byte, err error) {
 		return
 	}
 
-	jbody = jbodyFor(wi)
+	result = &Result{
+		Payload: wi,
+	}
 	return
 }

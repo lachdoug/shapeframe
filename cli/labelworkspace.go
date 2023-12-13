@@ -3,7 +3,6 @@ package cli
 import (
 	"sf/cli/cliapp"
 	"sf/controllers"
-	"sf/models"
 )
 
 func labelWorkspace() (command any) {
@@ -22,37 +21,27 @@ func labelWorkspace() (command any) {
 			"string", "name", "New name for the workspace",
 			"string", "about", "New about for the workspace",
 		),
-		Parametizer: labelWorkspaceParams,
-		Controller:  controllers.WorkspacesUpdate,
-		Viewer:      cliapp.View("workspaces/update", "labels/label"),
+		Handler:    labelWorkspaceHandler,
+		Controller: controllers.WorkspacesUpdate,
+		Viewer:     cliapp.View("workspaces/update", "labels/label"),
 	}
 	return
 }
 
-func labelWorkspaceParams(context *cliapp.Context) (jparams []byte, err error) {
-	var w *models.Workspace
-	workspace := context.Argument(0)
-
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace",
-	)
-	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
-		return
-	}
-
-	update := map[string]any{}
+func labelWorkspaceHandler(context *cliapp.Context) (params *controllers.Params, err error) {
+	updates := map[string]any{}
 	if context.IsSet("name") {
-		update["Name"] = context.StringFlag("name")
+		updates["Name"] = context.StringFlag("name")
 	}
 	if context.IsSet("about") {
-		update["About"] = context.StringFlag("about")
+		updates["About"] = context.StringFlag("about")
 	}
 
-	params := map[string]any{
-		"Workspace": w.Name,
-		"Update":    update,
+	params = &controllers.Params{
+		Payload: &controllers.WorkspacesUpdateParams{
+			Workspace: context.Argument(0),
+			Updates:   updates,
+		},
 	}
-
-	jparams = jsonParams(params)
 	return
 }

@@ -5,7 +5,7 @@ import (
 )
 
 type FramersIndexParams struct {
-	Workspace string // Limit list to workspace
+	Workspace string
 }
 
 type FramersIndexItemResult struct {
@@ -14,14 +14,14 @@ type FramersIndexItemResult struct {
 	About     string
 }
 
-func FramersIndex(jparams []byte) (jbody []byte, err error) {
+func FramersIndex(params *Params) (result *Result, err error) {
 	var frs []*models.Framer
-	params := ParamsFor[FramersIndexParams](jparams)
+	p := params.Payload.(*FramersIndexParams)
 
 	uc := models.ResolveUserContext(
 		"Workspaces", "Workspace",
 	)
-	if params.Workspace == "" {
+	if p.Workspace == "" {
 		for _, w := range uc.Workspaces {
 			if err = w.Load("Framers"); err != nil {
 				return
@@ -30,7 +30,7 @@ func FramersIndex(jparams []byte) (jbody []byte, err error) {
 		}
 	} else {
 		var w *models.Workspace
-		if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		if w, err = models.ResolveWorkspace(uc, p.Workspace,
 			"Framers",
 		); err != nil {
 			return
@@ -38,19 +38,19 @@ func FramersIndex(jparams []byte) (jbody []byte, err error) {
 		frs = w.Framers
 	}
 
-	result := []*FramersIndexItemResult{}
+	r := []*FramersIndexItemResult{}
 	var uri string
 	for _, fr := range frs {
 		if uri, err = fr.URI(); err != nil {
 			return
 		}
-		result = append(result, &FramersIndexItemResult{
+		r = append(r, &FramersIndexItemResult{
 			Workspace: fr.Workspace.Name,
 			URI:       uri,
 			About:     fr.About,
 		})
 	}
 
-	jbody = jbodyFor(result)
+	result = &Result{Payload: r}
 	return
 }

@@ -3,12 +3,14 @@ package cliapp
 import (
 	"fmt"
 	"os"
+	"sf/app/io"
+	"sf/controllers"
 	"strings"
 
 	ucli "github.com/urfave/cli/v2"
 )
 
-func uApp(router *Router) (uapp *ucli.App) {
+func NewUApp(router *Router) (uapp *ucli.App) {
 	uapp = &ucli.App{
 		Name:                 router.Name,
 		Usage:                router.Summary,
@@ -20,6 +22,8 @@ func uApp(router *Router) (uapp *ucli.App) {
 		OnUsageError:         usageError,
 		HideHelp:             true,
 		Commands:             uCommands(router.Commands),
+		Writer:               io.Out,
+		ErrWriter:            io.Err,
 	}
 	return
 }
@@ -43,7 +47,7 @@ func uCommand(kind string, command func() any) (ucommand *ucli.Command) {
 			Flags:        uFlags(cc.Flags),
 			OnUsageError: usageError,
 			HideHelp:     true,
-			Action:       uAction(kind, cc.Parametizer, cc.Controller, cc.Viewer),
+			Action:       uAction(kind, cc.Handler, cc.Controller, cc.Viewer),
 		}
 	case *CommandSet:
 		ucommand = &ucli.Command{
@@ -70,15 +74,15 @@ func uSubcommands(commands []func() any) (usubcommands []*ucli.Command) {
 
 func uAction(
 	kind string,
-	parametizer func(*Context) ([]byte, error),
-	controller func([]byte) ([]byte, error),
-	viewer func(map[string]any) (string, error),
+	handler func(*Context) (*controllers.Params, error),
+	controller func(*controllers.Params) (*controllers.Result, error),
+	viewer func(*controllers.Result) (string, error),
 ) (ufunction func(*ucli.Context) error) {
 	ufunction = func(ucontext *ucli.Context) (err error) {
 		cliAction := &Action{
-			Parametizer: parametizer,
-			Controller:  controller,
-			Viewer:      viewer,
+			Handler:    handler,
+			Controller: controller,
+			Viewer:     viewer,
 		}
 		cliContext := &Context{
 			UContext: ucontext,
@@ -119,12 +123,12 @@ func uFlag(kind string, namers string, about string) (uflag ucli.Flag) {
 }
 
 var commandNotFound func(*ucli.Context, string) = func(ucontext *ucli.Context, command string) {
-	_, _ = fmt.Fprintf(ucontext.App.Writer, "Incorrect Usage: %q is not a valid command\n", command)
+	_, _ = fmt.Fprintf(ucontext.App.ErrWriter, "Incorrect Usage: %q is not a valid command\n", command)
 	os.Exit(1)
 }
 
 var usageError func(*ucli.Context, error, bool) error = func(ucontext *ucli.Context, err error, isSubcommand bool) error {
-	_, _ = fmt.Fprintf(ucontext.App.Writer, "Incorrect Usage: %s\n", err)
+	_, _ = fmt.Fprintf(ucontext.App.ErrWriter, "Incorrect Usage: %s\n", err)
 	os.Exit(1)
 	return nil
 }

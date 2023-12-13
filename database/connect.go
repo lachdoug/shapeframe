@@ -3,8 +3,7 @@ package database
 import (
 	"log"
 	"os"
-	"path/filepath"
-	"sf/app"
+	"sf/app/errors"
 	"sf/utils"
 
 	"github.com/glebarez/sqlite"
@@ -36,7 +35,7 @@ func fileLogger() (fLog logger.Interface) {
 		panic(err)
 	}
 	var config logger.Config
-	if app.Debug {
+	if errors.Debug {
 		config = logger.Config{
 			LogLevel:             logger.Info,
 			ParameterizedQueries: false,
@@ -52,10 +51,10 @@ func fileLogger() (fLog logger.Interface) {
 }
 
 func dbFilePath() (dbFilePath string) {
-	dbFilePath = filepath.Join(utils.DataDir("."), "sf.db")
+	dbFilePath = utils.DataDir("sf.db")
 	return
 }
 func dbLogFilePath() (dbLogFilePath string) {
-	dbLogFilePath = filepath.Join(utils.DataDir("."), "sf.db.log")
+	dbLogFilePath = utils.LogDir("sf.db.log")
 	return
 }

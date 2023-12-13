@@ -3,7 +3,6 @@ package cli
 import (
 	"sf/cli/cliapp"
 	"sf/controllers"
-	"sf/models"
 )
 
 func listFrames() (command any) {
@@ -14,53 +13,43 @@ func listFrames() (command any) {
 		Usage: ss(
 			"sf list frames [options]",
 			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
-			"List frames in all workspaces by setting the -all flag",
-			"  Otherwise lists frames in workspace context",
-			"  Overrides -workspace flag",
 		),
 		Flags: ss(
 			"string", "workspace", "Workspace name",
-			"bool", "all", "All workspaces",
 		),
-		Parametizer: listFramesParams,
-		Controller:  controllers.FramesIndex,
-		Viewer:      listFramesViewer,
+		Handler:    listFramesHandler,
+		Controller: controllers.FramesIndex,
+		Viewer:     listFramesViewer,
 	}
 	return
 }
 
-func listFramesParams(context *cliapp.Context) (jparams []byte, err error) {
-	var w *models.Workspace
-	all := context.BoolFlag("all")
-	workspace := context.StringFlag("workspace")
-	params := map[string]any{}
-
-	if !all {
-		uc := models.ResolveUserContext(
-			"Workspaces", "Workspace",
-		)
-		if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
-			return
-		}
-		params["Workspace"] = w.Name
+func listFramesHandler(context *cliapp.Context) (params *controllers.Params, err error) {
+	params = &controllers.Params{
+		Payload: &controllers.FramesIndexParams{
+			Workspace: context.StringFlag("workspace"),
+		},
 	}
-
-	jparams = jsonParams(params)
 	return
 }
 
-func listFramesViewer(body map[string]any) (output string, err error) {
+func listFramesViewer(result *controllers.Result) (output string, err error) {
+	rs := result.Payload.([]*controllers.FramesIndexItemResult)
+	items := []map[string]any{}
+	for _, r := range rs {
+		items = append(items, map[string]any{
+			"Workspace": r.Workspace,
+			"Frame":     r.Frame,
+			"Framer":    r.Framer,
+			"About":     r.About,
+			"IsContext": r.IsContext,
+		})
+	}
+
 	table := &Table{
-		Items:  resultItems(body),
-		Titles: ss("FRAME", "WORKSPACE", "FRAMER", "ABOUT"),
-		Keys:   ss("Name", "Workspace", "Framer", "About"),
-		Values: tvs(
-			tableCellStringValueFn,
-			tableCellStringValueFn,
-			tableCellStringValueFn,
-			tableCellStringValueFn,
-		),
+		Items:  items,
+		Titles: ss("WORKSPACE", "FRAME", "FRAMER", "ABOUT"),
+		Keys:   ss("Workspace", "Frame", "Framer", "About"),
 		Accents: tas(
 			tableCellGreenIfInContextAccentFn,
 			tableCellGreenIfInContextAccentFn,
@@ -68,6 +57,10 @@ func listFramesViewer(body map[string]any) (output string, err error) {
 			tableCellNoAccentFn,
 		),
 	}
-	output, err = cliapp.View("frames/index")(table.generate())
+
+	result = &controllers.Result{
+		Payload: table.generate(),
+	}
+	output, err = cliapp.View("frames/index")(result)
 	return
 }

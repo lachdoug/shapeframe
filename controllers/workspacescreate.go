@@ -1,33 +1,34 @@
 package controllers
 
 import (
-	"sf/app"
+	"sf/app/validations"
 	"sf/models"
 )
 
 type WorkspacesCreateParams struct {
-	Name  string
-	About string
+	Workspace string
+	About     string
 }
 
 type WorkspacesCreateResult struct {
 	Workspace string
 }
 
-func WorkspacesCreate(jparams []byte) (jbody []byte, err error) {
+func WorkspacesCreate(params *Params) (result *Result, err error) {
+	p := params.Payload.(*WorkspacesCreateParams)
 	var w *models.Workspace
-	var vn *app.Validation
-	params := ParamsFor[WorkspacesCreateParams](jparams)
+	var vn *validations.Validation
 
 	uc := models.ResolveUserContext("Workspaces")
-	if w, vn, err = models.CreateWorkspace(uc, params.Name, params.About); err != nil {
+	if w, vn, err = models.CreateWorkspace(uc, p.Workspace, p.About); err != nil {
 		return
 	}
 
-	result := &WorkspacesCreateResult{
-		Workspace: w.Name,
+	result = &Result{
+		Payload: &WorkspacesCreateResult{
+			Workspace: w.Name,
+		},
+		Validation: vn,
 	}
-
-	jbody = jbodyFor(result, vn)
 	return
 }

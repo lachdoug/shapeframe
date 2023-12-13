@@ -1,5 +1,5 @@
 {{ define "repositorypulls/create" -}}
-{{ with .Result -}}
+{{ with .Payload -}}
 Successfully pulled repository {{ .URI }} in workspace {{ .Workspace }}
 {{ end -}}
 {{ end -}}

@@ -1,7 +1,7 @@
 package models
 
 import (
-	"sf/app"
+	"sf/app/errors"
 	"sf/database/queries"
 	"sf/utils"
 	"slices"
@@ -120,24 +120,17 @@ func (fl *FrameLoader) loadFramer() (err error) {
 
 func (fl *FrameLoader) loadConfiguration() (err error) {
 	if fl.Configuration {
-		if err = fl.SetConfiguration(); err != nil {
+		if err = fl.setConfiguration(); err != nil {
 			return
 		}
-		err = fl.Frame.Configuration.Load(fl.ConfigurationLoads...)
+		err = fl.Frame.Configuration.load(fl.ConfigurationLoads...)
 	}
 	return
 }
 
-func (fl *FrameLoader) SetConfiguration() (err error) {
-	c := &Configuration{
-		OwnerID:   fl.Frame.ID,
-		OwnerType: "Frame",
-	}
+func (fl *FrameLoader) setConfiguration() (err error) {
+	c := NewConfiguration(fl.Frame.ID, "frame", "frame", fl.Frame.Framer.Frame)
 	queries.Lookup(c)
-	if c.ID == 0 {
-		c = NewConfiguration(fl.Frame)
-	}
-	c.Owner = fl.Frame
 	fl.Frame.Configuration = c
 	return
 }
@@ -145,7 +138,7 @@ func (fl *FrameLoader) SetConfiguration() (err error) {
 func (fl *FrameLoader) SetFramer() (err error) {
 	framer := fl.Frame.Workspace.FindFramer(fl.Frame.FramerName)
 	if framer == nil {
-		err = app.Error(
+		err = errors.Errorf(
 			"framer %s does not exist in workspace %s",
 			fl.Frame.FramerName,
 			fl.Frame.Workspace.Name,

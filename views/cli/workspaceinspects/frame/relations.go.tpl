@@ -1,9 +1,8 @@
 {{ define "workspaceinspects/frame/relations" -}}
-Relations:
-  Parent: {{ .Parent }}
-{{ include "workspaceinspects/frame/children" (.Children) 2 }}
-{{ include "workspaceinspects/frame/ancestors" (.Ancestors) 2 }}
-{{ include "workspaceinspects/frame/descendents" (.Descendents) 2 }}
+Parent: {{ .Parent }}
+Children: {{ include "workspaceinspects/frame/children" .Children 2 0 }}
+Ancestors: {{ include "workspaceinspects/frame/ancestors" .Ancestors 2 0 }}
+Descendents: {{ include "workspaceinspects/frame/descendents" .Descendents 2 0 }}
 {{ end -}}
 
 

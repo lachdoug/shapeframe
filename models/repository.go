@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
-	"sf/app"
+	"sf/app/errors"
+	"sf/app/streams"
+	"sf/app/validations"
 	"sf/utils"
 	"strings"
 )
@@ -42,14 +44,14 @@ func NewRepository(w *Workspace, uri string) (r *Repository) {
 	return
 }
 
-func CreateRepository(w *Workspace, uri string, protocol string, username string, token string, st *utils.Stream) (r *Repository, vn *app.Validation, err error) {
+func CreateRepository(w *Workspace, uri string, protocol string, username string, token string, st *streams.Stream) (r *Repository, vn *validations.Validation, err error) {
 	r = NewRepository(w, uri)
 	if err = r.Load("GitRepo"); err != nil {
 		return
 	}
 	if vn = r.Validation(); vn.IsValid() {
 		if r.IsExists() {
-			err = app.Error("repository %s already exists in workspace %s", uri, w.Name)
+			err = errors.Errorf("repository %s already exists in workspace %s", uri, w.Name)
 			return
 		}
 		r.Create(protocol, username, token, st)
@@ -59,16 +61,16 @@ func CreateRepository(w *Workspace, uri string, protocol string, username string
 
 func ResolveRepository(w *Workspace, uri string, loads ...string) (r *Repository, err error) {
 	if w == nil {
-		err = app.Error("no workspace")
+		err = errors.Error("no workspace")
 		return
 	}
 	if len(w.Repositories) == 0 {
-		err = app.Error("no repositories exist in workspace %s", w.Name)
+		err = errors.Errorf("no repositories exist in workspace %s", w.Name)
 		return
 	}
 	r = w.FindRepository(uri)
 	if r == nil {
-		err = app.Error("repository %s does not exist in workspace %s", uri, w.Name)
+		err = errors.Errorf("repository %s does not exist in workspace %s", uri, w.Name)
 		return
 	}
 	if len(loads) > 0 {
@@ -132,19 +134,19 @@ func (r *Repository) Load(loads ...string) (err error) {
 	return
 }
 
-func (r *Repository) Validation() (vn *app.Validation) {
-	vn = &app.Validation{}
+func (r *Repository) Validation() (vn *validations.Validation) {
+	vn = validations.NewValidation()
 	if r.URI == "" {
 		vn.Add("URI", "must not be blank")
 	}
 	return
 }
 
-func (r *Repository) Create(protocol string, username string, password string, st *utils.Stream) {
+func (r *Repository) Create(protocol string, username string, password string, st *streams.Stream) {
 	go r.GitRepo.clone(r.OriginURL(protocol), username, password, st)
 }
 
-func (r *Repository) Update(username string, password string, st *utils.Stream) {
+func (r *Repository) Update(username string, password string, st *streams.Stream) {
 	go r.GitRepo.pull(username, password, st)
 }
 
@@ -153,7 +155,8 @@ func (r *Repository) Checkout(branch string) (err error) {
 	return
 }
 
-func (r *Repository) Destroy() {
+func (r *Repository) Delete() {
+	utils.RemoveDir(r.directory())
 	r.GitRepo.remove()
 }
 

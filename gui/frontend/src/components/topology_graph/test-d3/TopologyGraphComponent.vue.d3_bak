@@ -1,0 +1,424 @@
+<script setup>
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { select, drag, forceSimulation, forceCenter, forceManyBody, forceLink, forceCollide } from 'd3';
+import topologyDataFor from '/src/components/topology_graph/topology_data.js'
+import chartDataFor from '/src/components/topology_graph/chart_data.js'
+import { mdiDownloadOutline, mdiShuffle } from '@mdi/js'
+
+const props = defineProps({
+  data: {
+    type: Object,
+    default: () => ({}),
+  },
+})
+
+const viewScroller = ref(null)
+const graphContainerWrapper = ref(null)
+const graphContainer = ref(null)
+let chartData, resizeTimer, resizeObserver, container, scale, simulation, links, nodes
+
+onMounted(() => {
+  nextTick(() => {
+    setChartData()
+    setContainer()
+    setLinks()
+    setNodes()
+    setScale()
+    resizeContainer()
+    setSimulation()
+    simulate()
+    resizeObserver = new ResizeObserver(resizeHandler)
+    resizeObserver.observe(viewScroller.value)
+  })
+})
+
+onBeforeUnmount(() => {
+  resizeObserver.disconnect()
+})
+
+const resizeHandler = () => {
+  stopSimulation()
+  clearTimeout(resizeTimer)
+  resizeTimer = setTimeout(() => {
+    setScale()
+    resizeContainer()
+    setSimulation()
+    simulate()
+  }, 100)
+}
+
+const stopSimulation = () => {
+  simulation.stop()
+}
+
+const dragHandler = () => {
+  const dragstarted = event => {
+    if (!event.active) simulation.alphaTarget(0.3).restart();
+    event.subject.fx = event.subject.x;
+    event.subject.fy = event.subject.y;
+  }
+  const dragged = event => {
+    event.subject.fx = event.x;
+    event.subject.fy = event.y;
+  }
+  const dragended = event => {
+    if (!event.active) simulation.alphaTarget(0);
+    event.subject.fx = null;
+    event.subject.fy = null;
+  }
+  return drag()
+    .on("start", dragstarted)
+    .on("drag", dragged)
+    .on("end", dragended);
+}
+
+const moveNode = (minX, maxX, minY, maxY) => (node, index, elements) => {
+  const element = elements[index]
+  const imageElement = element.querySelector('image')
+  const imageRectElement = element.querySelector('rect.image')
+  const textElement = element.querySelector('text')
+  const textRectElement = element.querySelector('rect.text')
+
+  if (node.x < minX) {
+    node.x = minX
+    node.vx = -node.vx
+  } else if (node.x > maxX) {
+    node.x = maxX
+    node.vy = -node.vy
+  }
+
+  if (node.y < minY) {
+    node.y = minY
+    node.vy = -node.vy
+  } else if (node.y > maxY) {
+    node.y = maxY
+    node.vy = -node.vy
+  }
+
+  const x = node.x
+  const y = node.y
+
+  imageElement.setAttribute('x', x - 24)
+  imageElement.setAttribute('y', y - 24)
+
+  imageRectElement.setAttribute('x', x - 26)
+  imageRectElement.setAttribute('y', y - 26)
+
+  textElement.setAttribute('x', x)
+  textElement.setAttribute('y', y + 45)
+
+  const textBBox = textElement.getBBox()
+  textRectElement.setAttribute('x', textBBox.x - 5)
+  textRectElement.setAttribute('y', textBBox.y)
+}
+
+const moveLink = (minX, maxX, minY, maxY) => (link, index, elements) => {
+  const element = elements[index]
+  const pathElement = element.querySelector('path')
+  // const textElement = element.querySelector('text')
+  // const rectElement = element.querySelector('rect')
+
+  const x1 = link.source.x < minX ? minX : link.source.x > maxX ? maxX : link.source.x
+  const x2 = link.target.x < minX ? minX : link.target.x > maxX ? maxX : link.target.x
+  const y1 = link.source.y < minY ? minY : link.source.y > maxY ? maxY : link.source.y
+  const y2 = link.target.y < minY ? minY : link.target.y > maxY ? maxY : link.target.y
+
+  pathElement.setAttribute('d', `
+    M ${x1} ${y1} 
+    C ${(x1 + x2) / 2} ${y1} 
+      ${(x1 + x2) / 2} ${y2} 
+      ${x2} ${y2}`)
+
+  // textElement.setAttribute('x', (x1 + x2) / 2)
+  // textElement.setAttribute('y', (y1 + y2) / 2)
+
+  // const textBBox = textElement.getBBox()
+  // rectElement.setAttribute('x', textBBox.x - 5)
+  // rectElement.setAttribute('y', textBBox.y)
+}
+
+const ticker = () => {
+  const minX = 40
+  const minY = 40
+  const maxX = container.clientWidth - 40
+  const maxY = container.clientHeight - 60
+
+  nodes.each(moveNode(minX, maxX, minY, maxY))
+  links.each(moveLink(minX, maxX, minY, maxY))
+}
+
+const simulate = () => {
+  simulation.on('tick', ticker);
+}
+
+const setChartData = () => {
+  chartData = chartDataFor(topologyDataFor(props.data))
+}
+
+const setNodes = () => {
+  nodes = select(container)
+    .selectAll('g.node')
+    .data(chartData.nodes)
+    .join('g')
+    .call(dragHandler())
+  nodes
+    .append('rect')
+    .attr('class', 'image')
+    .attr('stroke', '#666')
+    .attr('stroke-width', 1)
+    .attr('fill', 'white')
+    .attr('width', 52)
+    .attr('height', 52)
+  nodes
+    .append('image')
+    .attr('xlink:href', node => `/api${node.icon}`)
+  nodes
+    .append('rect')
+    .attr('class', 'text')
+    .attr('fill', 'white')
+    .attr('stroke', '#666')
+  nodes
+    .append('text')
+    .text(d => d.label)
+    .attr('fill', '#666')
+    .attr('font-size', '14pt')
+    .attr('text-anchor', 'middle')
+  nodes
+    .select('text')
+    .each((node, index, textElements) => node.textBBox = textElements[index].getBBox())
+  nodes
+    .select('rect.text')
+    .attr('height', node => node.textBBox.height + 2)
+    .attr('width', node => node.textBBox.width + 10)
+}
+
+const setLinks = () => {
+  links = select(container)
+    .selectAll('g.link')
+    .data(chartData.links)
+    .join('g')
+  links
+    .append('path')
+    .attr("fill", "transparent")
+    .attr('stroke', (link, index) => chartData.lines.colors[index])
+    .attr('stroke-width', (link, index) => chartData.lines.widths[index])
+    .attr('stroke-dasharray', (link, index) => chartData.lines.dashes[index])
+  links
+    .append('rect')
+    .attr('fill', 'white')
+    .attr('stroke', '#666')
+  // links
+  //   .append('text')
+  //   .text(d => d.label)
+  //   .attr('fill', '#666')
+  //   .attr('font-size', '14pt')
+  //   .attr('text-anchor', 'middle')
+  //   .attr('dominant-baseline', 'middle')
+  // links
+  //   .select('text')
+  //   .each((link, index, textElements) => link.textBBox = textElements[index].getBBox())
+  // links
+  //   .select('rect')
+  //   .attr('height', link => link.textBBox.height + 2)
+  //   .attr('width', link => link.textBBox.width + 10)
+}
+
+const setContainer = () => {
+  container = graphContainer.value
+}
+
+const setSimulation = () => {
+  simulation = forceSimulation(chartData.nodes)
+    .velocityDecay(0.5)
+    .force('charge', forceManyBody().strength(-750))
+    .force('link', forceLink(chartData.links).strength(.2))
+    // .force("collision", forceCollide().radius(100).strength(0.5))
+    .force(
+      'center',
+      forceCenter(container.clientWidth / 2, container.clientHeight / 2)
+    )
+}
+
+const clearChart = () => {
+  container.innerHTML = ''
+  links = null
+  nodes = null
+}
+
+const shufflePositions = () => {
+  window.localStorage.graphShuffleSeed = Math.floor(Math.random() * 10000)
+  clearChart()
+  setChartData()
+  setLinks()
+  setNodes()
+  setSimulation()
+  simulate()
+}
+
+const setScale = () => {
+  const view = viewScroller.value
+  const width = view.clientWidth
+  const height = view.clientHeight
+
+  const area = width * height
+  const nodeCount = chartData.nodes.length
+
+  scale = window.settings.graphScale * 25000 * nodeCount / area
+  if (scale < 1) scale = 1
+  console.log(width, height, area, nodeCount, scale)
+}
+
+const resizeContainer = () => {
+  const fit = window.settings.graphFit
+  const containerWrapper = graphContainerWrapper.value
+  let width, height
+  container.style.scale = 1 / scale
+  if (fit) {
+    containerWrapper.style.height = '100%'
+    containerWrapper.style.width = '100%'
+    width = containerWrapper.clientWidth
+    height = containerWrapper.clientHeight
+  } else {
+    width = window.settings.graphSizeX
+    height = window.settings.graphSizeY
+    containerWrapper.style.height = `${height}px`
+    containerWrapper.style.width = `${width}px`
+  }
+  container.style.height = `${height * scale}px`
+  container.style.width = `${width * scale}px`
+  container.style.top = `-${height * (scale - 1) / 2}px`
+  container.style.left = `-${width * (scale - 1) / 2}px`
+}
+
+const exportImage = () => {
+
+
+  async function convertImages() {
+
+    function imageToDataURL(imageUrl) {
+      return fetch(imageUrl)
+        .then((response) => response.blob())
+        .then((blob) => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = function () {
+              resolve(reader.result);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        });
+    }
+
+    const images = container.querySelectorAll("image");
+    for (const i in images) {
+      if (Object.prototype.hasOwnProperty.call(images, i)) {
+        const img = images[i];
+        const imgHref = img.getAttribute("xlink:href");
+        const dataURL = (await imageToDataURL(imgHref));
+        img.removeAttribute('href')
+        img.setAttribute("xlink:href", dataURL);
+      }
+    }
+  }
+
+  function download() {
+
+    const width = container.clientWidth
+    const height = container.clientHeight
+
+    let clonedSvg = container.cloneNode(true);
+
+    let outerHTML = clonedSvg.outerHTML
+    let blob = new Blob([outerHTML], { type: 'image/svg+xml;charset=utf-8' })
+    let blobUrl = URL.createObjectURL(blob)
+
+    const image = new Image()
+    debugger
+
+    image.onload = () => {
+      let canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      let context = canvas.getContext('2d');
+      context.drawImage(image, 0, 0, width, height);
+      // debugger
+
+      viewScroller.value.append(image)
+      viewScroller.value.append(canvas)
+
+
+      const outputUrl = canvas.toDataURL('image/png')
+      const link = document.createElement('a')
+      link.download = 'shapeframe-graph.png'
+      link.href = outputUrl
+      link.click()
+      // URL.revokeObjectURL(blobUrl);
+
+    }
+
+    image.src = blobUrl
+
+  }
+
+  convertImages().then(() => {
+    download()
+  })
+
+
+}
+</script>
+
+<template>
+  <div ref="viewScroller" class="view-scroller">
+    <div class="buttons">
+      <v-btn title="Shuffle positions" @click="shufflePositions">
+        <v-icon :icon="mdiShuffle" />
+      </v-btn>
+      <v-btn title="Download image" @click="exportImage">
+        <v-icon :icon="mdiDownloadOutline" />
+      </v-btn>
+    </div>
+    <div ref="graphContainerWrapper" class="graph-container-wrapper">
+      <svg ref="graphContainer" class="graph-container" xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink"></svg>
+    </div>
+  </div>
+</template> 
+
+<style scoped>
+.view-scroller {
+  overflow: auto;
+  /* Vuetify v-toolbar height is 64px (on desktop and 56px on mobile). v-container margins are 16px. */
+  height: calc(100vh - 64px);
+  margin: -16px;
+}
+
+.graph-container-wrapper {
+  overflow: hidden;
+}
+
+.graph-container {
+  position: relative;
+}
+
+
+.view-scroller>.buttons {
+  z-index: 2000;
+  position: fixed;
+  right: 0px;
+  top: 65px;
+}
+
+.view-scroller>.buttons {
+  display: none;
+}
+
+.view-scroller:hover>.buttons {
+  display: unset;
+}
+
+.view-scroller>.buttons>* {
+  margin: 5px;
+}
+</style>

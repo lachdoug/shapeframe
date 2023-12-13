@@ -1,10 +1,10 @@
 {{ define "repositories/read" -}}
-{{ with .Result -}}
+{{ with .Payload -}}
 Workspace: {{ .Workspace }}
 URI: {{ .URI }}
 Branch: {{ .Branch }}
-{{ include "repositories/branches" (.Branches) }}
-{{ include "repositories/shapers" (.Shapers) }}
-{{ include "repositories/framers" (.Framers) }}
+Branches: {{ include "repositories/branches" .Branches }}
+Shapers: {{ include "repositories/shapers" .Shapers }}
+Framers: {{ include "repositories/framers" .Framers }}
 {{ end -}}
 {{ end -}}

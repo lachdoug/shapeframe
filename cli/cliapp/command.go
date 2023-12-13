@@ -1,5 +1,7 @@
 package cliapp
 
+import "sf/controllers"
+
 type Command struct {
 	Name        string
 	Summary     string
@@ -7,7 +9,7 @@ type Command struct {
 	Description []string
 	Aliases     []string
 	Flags       []string
-	Parametizer func(*Context) ([]byte, error)
-	Controller  func([]byte) ([]byte, error)
-	Viewer      func(map[string]any) (string, error)
+	Handler     func(*Context) (*controllers.Params, error)
+	Controller  func(*controllers.Params) (*controllers.Result, error)
+	Viewer      func(*controllers.Result) (string, error)
 }

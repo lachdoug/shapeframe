@@ -3,7 +3,6 @@ package cli
 import (
 	"sf/cli/cliapp"
 	"sf/controllers"
-	"sf/models"
 )
 
 func removeRepository() (command any) {
@@ -20,28 +19,19 @@ func removeRepository() (command any) {
 		Flags: ss(
 			"string", "workspace", "Name of the workspace",
 		),
-		Parametizer: removeRepositoryParams,
-		Controller:  controllers.RepositoriesDestroy,
-		Viewer:      cliapp.View("repositories/destroy"),
+		Handler:    removeRepositoryHandler,
+		Controller: controllers.RepositoriesDelete,
+		Viewer:     cliapp.View("repositories/delete"),
 	}
 	return
 }
 
-func removeRepositoryParams(context *cliapp.Context) (jparams []byte, err error) {
-	var w *models.Workspace
-	uri := context.Argument(0)
-	workspace := context.StringFlag("workspace")
-
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace",
-	)
-	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
-		return
+func removeRepositoryHandler(context *cliapp.Context) (params *controllers.Params, err error) {
+	params = &controllers.Params{
+		Payload: &controllers.RepositoriesDeleteParams{
+			URI:       context.Argument(0),
+			Workspace: context.StringFlag("workspace"),
+		},
 	}
-
-	jparams = jsonParams(map[string]any{
-		"Workspace": w.Name,
-		"URI":       uri,
-	})
 	return
 }

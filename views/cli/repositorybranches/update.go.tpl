@@ -1,5 +1,5 @@
 {{ define "repositorybranches/update" -}}
-{{ with .Result -}}
+{{ with .Payload -}}
 Successfully checked-out branch {{ .Branch }} for repository {{ .URI }} in workspace {{ .Workspace }}
 {{ end -}}
 {{ end -}}

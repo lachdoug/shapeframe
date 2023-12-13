@@ -6,41 +6,52 @@ import (
 	"os"
 	"regexp"
 	"sf/app"
+	"sf/app/errors"
+	"sf/app/io"
+	"sf/app/logs"
 	"sf/cli"
 	"sf/database"
 	"sf/database/migration"
+	"sf/gui"
+	"sf/tui"
+	"sf/views"
 	"strings"
 )
 
 // Embed the view templates.
 //
 //go:embed views
-var views embed.FS
+var embededViews embed.FS
 
 func init() {
-	app.SetDebug(os.Args)
-	app.SetIO(os.Stdout, os.Stdin, os.Stderr)
-	app.SetViews(&views)
+	app.SetDirs()
+	logs.SetLogger()
+	errors.SetDebug(os.Args)
+	io.SetIO(os.Stdout, os.Stdin, os.Stderr)
+	views.SetViews(&embededViews)
 	database.Connect()
 	migration.Migrate()
 }
 
 func main() {
+	logs.Logf("sf command args: %s", os.Args)
+
+	rargs := routerArgs()
+	if errors.Debug {
+		debugMessage(rargs)
+	}
 	if arg(0) == "gui" {
-		port := arg(1)
-		app.Println("Start the GUI", port)
+		gui.Run(arg(1))
+	} else if arg(0) == "tui" {
+		tui.Run()
 	} else {
-		rargs := cliRouterArgs()
-		if app.Debug {
-			debugMessage(rargs)
-		}
-		cli.Router(rargs)
+		cli.Run(rargs)
 	}
 }
 
 func arg(i int) (val string) {
-	if app.Debug {
-		i = i + 2 // skip first two args, which are sf -debug
+	if errors.Debug {
+		i = i + 2 // skip first two args, which are sf --debug
 	} else {
 		i = i + 1 // skip first arg, which is sf
 	}
@@ -52,9 +63,9 @@ func arg(i int) (val string) {
 	return
 }
 
-func cliRouterArgs() (rargs []string) {
-	if app.Debug {
-		// Remove the -debug flag fram args before passing to router
+func routerArgs() (rargs []string) {
+	if errors.Debug {
+		// Remove the --debug flag fram args before passing to router
 		rargs = append(os.Args[0:1], os.Args[2:]...)
 	} else {
 		rargs = os.Args
@@ -63,8 +74,6 @@ func cliRouterArgs() (rargs []string) {
 }
 
 func debugMessage(rargs []string) {
-	redColor := "\033[0;31m"
-	noColor := "\033[0m"
 	// Quote args with spaces
 	argHasSpaceRegexp := regexp.MustCompile(`\s`)
 	for i, rarg := range rargs {
@@ -72,5 +81,5 @@ func debugMessage(rargs []string) {
 			rargs[i] = fmt.Sprintf("%q", rarg)
 		}
 	}
-	app.PrintfErr("%sDebug: %s%s\n", redColor, strings.Join(rargs, " "), noColor)
+	io.PrintfErr("%sDebug: %s%s\n", io.RedColor, strings.Join(rargs, " "), io.ResetText)
 }

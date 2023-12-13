@@ -17,17 +17,6 @@ type UserContext struct {
 	Workspaces  []*Workspace
 }
 
-type UserContextChange struct {
-	Exit  *UserContextInspector
-	Enter *UserContextInspector
-}
-
-type UserContextInspector struct {
-	Workspace string
-	Frame     string
-	Shape     string
-}
-
 // Construction
 
 func NewUserContext(loads ...string) (uc *UserContext) {
@@ -37,7 +26,6 @@ func NewUserContext(loads ...string) (uc *UserContext) {
 	return
 }
 
-// Resolve user context
 func ResolveUserContext(loads ...string) (uc *UserContext) {
 	uc = NewUserContext()
 	uc.Load(loads...)
@@ -50,49 +38,34 @@ func (uc *UserContext) Load(preloads ...string) {
 	queries.Load(uc, uc.ID, preloads...)
 }
 
-func (uc *UserContext) Save() {
-	queries.Save(uc)
-}
-
 func (uc *UserContext) Clear(assocName string) {
 	queries.Clear(uc, assocName)
 }
 
-// Inspection
+// Record
 
-func (uc *UserContext) Inspect() (uci *UserContextInspector) {
-	uci = &UserContextInspector{
-		Workspace: uc.WorkspaceName(),
-		Frame:     uc.FrameName(),
-		Shape:     uc.ShapeName(),
-	}
-	return
+func (uc *UserContext) Save() {
+	queries.Save(uc)
 }
 
 // Associations
 
 func (uc *UserContext) WorkspaceName() (n string) {
-	if uc.Workspace == nil {
-		n = ""
-	} else {
+	if uc.Workspace != nil {
 		n = uc.Workspace.Name
 	}
 	return
 }
 
 func (uc *UserContext) FrameName() (n string) {
-	if uc.Frame == nil {
-		n = ""
-	} else {
+	if uc.Frame != nil {
 		n = uc.Frame.Name
 	}
 	return
 }
 
 func (uc *UserContext) ShapeName() (n string) {
-	if uc.Shape == nil {
-		n = ""
-	} else {
+	if uc.Shape != nil {
 		n = uc.Shape.Name
 	}
 	return

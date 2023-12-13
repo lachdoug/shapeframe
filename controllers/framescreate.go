@@ -1,14 +1,14 @@
 package controllers
 
 import (
-	"sf/app"
+	"sf/app/validations"
 	"sf/models"
 )
 
 type FramesCreateParams struct {
-	Workspace string
 	Framer    string
-	Name      string
+	Workspace string
+	Frame     string
 	About     string
 }
 
@@ -17,27 +17,28 @@ type FramesCreateResult struct {
 	Frame     string
 }
 
-func FramesCreate(jparams []byte) (jbody []byte, err error) {
+func FramesCreate(params *Params) (result *Result, err error) {
+	p := params.Payload.(*FramesCreateParams)
 	var w *models.Workspace
 	var f *models.Frame
-	var vn *app.Validation
-	params := ParamsFor[FramesCreateParams](jparams)
+	var vn *validations.Validation
 
-	uc := models.ResolveUserContext("Workspaces")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+	uc := models.ResolveUserContext("Workspaces", "Workspace")
+	if w, err = models.ResolveWorkspace(uc, p.Workspace,
 		"Frames", "Framers",
 	); err != nil {
 		return
 	}
-	if f, vn, err = models.CreateFrame(w, params.Framer, params.Name, params.About); err != nil {
+	if f, vn, err = models.CreateFrame(w, p.Framer, p.Frame, p.About); err != nil {
 		return
 	}
 
-	result := &FramesCreateResult{
-		Workspace: w.Name,
-		Frame:     f.Name,
+	result = &Result{
+		Payload: &FramesCreateResult{
+			Workspace: w.Name,
+			Frame:     f.Name,
+		},
+		Validation: vn,
 	}
-
-	jbody = jbodyFor(result, vn)
 	return
 }

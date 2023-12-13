@@ -3,7 +3,6 @@ package cli
 import (
 	"sf/cli/cliapp"
 	"sf/controllers"
-	"sf/models"
 )
 
 func getWorkspace() (command any) {
@@ -16,8 +15,8 @@ func getWorkspace() (command any) {
 			"Provide an optional workspace name as an argument",
 			"  Uses workspace context when not provided",
 		),
-		Parametizer: getWorkspaceParams,
-		Controller:  controllers.WorkspacesRead,
+		Handler:    getWorkspaceHandler,
+		Controller: controllers.WorkspacesRead,
 		Viewer: cliapp.View(
 			"workspaces/read",
 			"workspaces/frames",
@@ -28,21 +27,11 @@ func getWorkspace() (command any) {
 	return
 }
 
-func getWorkspaceParams(context *cliapp.Context) (jparams []byte, err error) {
-	var w *models.Workspace
-	workspace := context.Argument(0)
-
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace",
-	)
-	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
-		return
+func getWorkspaceHandler(context *cliapp.Context) (params *controllers.Params, err error) {
+	params = &controllers.Params{
+		Payload: &controllers.WorkspacesReadParams{
+			Workspace: context.Argument(0),
+		},
 	}
-
-	params := map[string]any{
-		"Workspace": w.Name,
-	}
-
-	jparams = jsonParams(params)
 	return
 }

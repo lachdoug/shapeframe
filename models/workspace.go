@@ -2,7 +2,8 @@ package models
 
 import (
 	"path/filepath"
-	"sf/app"
+	"sf/app/errors"
+	"sf/app/validations"
 	"sf/database/queries"
 	"sf/utils"
 	"strings"
@@ -53,11 +54,11 @@ func NewWorkspace(uc *UserContext, name string) (w *Workspace) {
 	return
 }
 
-func CreateWorkspace(uc *UserContext, name string, about string) (w *Workspace, vn *app.Validation, err error) {
+func CreateWorkspace(uc *UserContext, name string, about string) (w *Workspace, vn *validations.Validation, err error) {
 	w = NewWorkspace(uc, name)
 	w.About = about
 	if w.IsExists() {
-		err = app.Error("workspace %s already exists", w.Name)
+		err = errors.Errorf("workspace %s already exists", w.Name)
 		return
 	}
 	if vn = w.Validation(); vn.IsValid() {
@@ -68,23 +69,23 @@ func CreateWorkspace(uc *UserContext, name string, about string) (w *Workspace, 
 
 func ResolveWorkspace(uc *UserContext, name string, loads ...string) (w *Workspace, err error) {
 	if uc == nil {
-		err = app.Error("no user context")
+		err = errors.Error("no user context")
 		return
 	}
 	if name == "" {
 		w = uc.Workspace
 		if w == nil {
-			err = app.Error("no workspace context")
+			err = errors.Error("no workspace context")
 			return
 		}
 	} else {
 		if len(uc.Workspaces) == 0 {
-			err = app.Error("no workspaces exist")
+			err = errors.Error("no workspaces exist")
 			return
 		}
 		w = uc.FindWorkspace(name)
 		if w == nil {
-			err = app.Error("workspace %s does not exist", name)
+			err = errors.Errorf("workspace %s does not exist", name)
 			return
 		}
 	}
@@ -200,8 +201,8 @@ func (w *Workspace) Assign(params map[string]any) {
 	}
 }
 
-func (w *Workspace) Validation() (vn *app.Validation) {
-	vn = &app.Validation{}
+func (w *Workspace) Validation() (vn *validations.Validation) {
+	vn = validations.NewValidation()
 	if w.Name == "" {
 		vn.Add("Name", "must not be blank")
 	}
@@ -211,11 +212,22 @@ func (w *Workspace) Validation() (vn *app.Validation) {
 	return
 }
 
+func (w *Workspace) Update(updates map[string]any) (vn *validations.Validation) {
+	w.Assign(updates)
+	if vn = w.Validation(); vn.IsValid() {
+		w.Save()
+	}
+	return
+}
+
+// Record
+
 func (w *Workspace) Save() {
 	queries.Save(w)
 }
 
-func (w *Workspace) Destroy() {
+func (w *Workspace) Delete() {
+	utils.RemoveDir(w.directory())
 	queries.Delete(w)
 }
 

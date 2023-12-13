@@ -1,19 +1,17 @@
 package controllers
 
-import (
-	"sf/models"
-)
+import "sf/models"
 
 type WorkspacesReadParams struct {
 	Workspace string
 }
 
-func WorkspacesRead(jparams []byte) (jbody []byte, err error) {
+func WorkspacesRead(params *Params) (result *Result, err error) {
 	var w *models.Workspace
-	params := ParamsFor[WorkspacesReadParams](jparams)
+	p := params.Payload.(*WorkspacesReadParams)
 
-	uc := models.ResolveUserContext("Workspaces")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+	uc := models.ResolveUserContext("Workspaces", "Workspace")
+	if w, err = models.ResolveWorkspace(uc, p.Workspace,
 		"Frames",
 		"Directories",
 		"Repositories.GitRepo",
@@ -21,8 +19,8 @@ func WorkspacesRead(jparams []byte) (jbody []byte, err error) {
 		return
 	}
 
-	result := w.Read()
-
-	jbody = jbodyFor(result)
+	result = &Result{
+		Payload: w.Read(),
+	}
 	return
 }

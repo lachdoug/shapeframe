@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"sf/app"
+	"sf/app/validations"
 	"sf/models"
 )
 
@@ -9,7 +9,7 @@ type ShapesUpdateParams struct {
 	Workspace string
 	Frame     string
 	Shape     string
-	Update    map[string]any
+	Updates   map[string]any
 }
 
 type ShapesUpdateResult struct {
@@ -26,29 +26,31 @@ type ShapesUpdateResultDetails struct {
 	Configuration []map[string]any
 }
 
-func ShapesUpdate(jparams []byte) (jbody []byte, err error) {
+func ShapesUpdate(params *Params) (result *Result, err error) {
+	p := params.Payload.(*ShapesUpdateParams)
 	var w *models.Workspace
 	var f *models.Frame
 	var s *models.Shape
-	var vn *app.Validation
-	params := ParamsFor[ShapesUpdateParams](jparams)
+	var vn *validations.Validation
 
-	uc := models.ResolveUserContext("Workspaces")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+	uc := models.ResolveUserContext(
+		"Workspaces", "Workspace", "Frame", "Shape",
+	)
+	if w, err = models.ResolveWorkspace(uc, p.Workspace,
 		"Frames",
 	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, params.Frame,
+	if f, err = models.ResolveFrame(uc, w, p.Frame,
 		"Shapes",
 	); err != nil {
 		return
 	}
-	if s, err = models.ResolveShape(uc, f, params.Shape); err != nil {
+	if s, err = models.ResolveShape(uc, f, p.Shape); err != nil {
 		return
 	}
 
-	result := &ShapesUpdateResult{
+	r := &ShapesUpdateResult{
 		Workspace: w.Name,
 		Frame:     f.Name,
 		Shape:     s.Name,
@@ -58,13 +60,16 @@ func ShapesUpdate(jparams []byte) (jbody []byte, err error) {
 		},
 	}
 
-	vn = s.Update(params.Update)
+	vn = s.Update(p.Updates)
 
-	result.To = &ShapesUpdateResultDetails{
+	r.To = &ShapesUpdateResultDetails{
 		Name:  s.Name,
 		About: s.About,
 	}
 
-	jbody = jbodyFor(result, vn)
+	result = &Result{
+		Payload:    r,
+		Validation: vn,
+	}
 	return
 }

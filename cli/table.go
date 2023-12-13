@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"sf/app/logs"
 	"sf/utils"
 	"strings"
 )
@@ -10,101 +11,106 @@ type Table struct {
 	Items   []map[string]any
 	Titles  []string
 	Keys    []string
-	Values  []func(any) string
 	Accents []func(string, map[string]any) string
 }
 
-func (wt *Table) tableValues() (rows [][]string) {
-	for i := range wt.Items {
-		rows = append(rows, wt.rowValues(i))
+func (t *Table) tableValues() (rows [][]string) {
+	for i := range t.Items {
+		rows = append(rows, t.rowValues(i))
 	}
 	return
 }
 
-func (wt *Table) rowValues(i int) (row []string) {
-	for j := range wt.Keys {
-		row = append(row, wt.cellValue(i, j))
+func (t *Table) rowValues(i int) (row []string) {
+	for j := range t.Keys {
+		row = append(row, t.cellValue(i, j))
 	}
 	return
 }
 
-func (wt *Table) cellValue(i int, j int) (value string) {
-	item := wt.Items[i]
-	value = wt.Values[j](item[wt.Keys[j]])
+func (t *Table) cellValue(i int, j int) (value string) {
+	item := t.Items[i]
+	value = item[t.Keys[j]].(string)
 	return
 }
 
-func (wt *Table) rows(tableValues [][]string, lengths []int) (rows []string) {
-	for i, item := range wt.Items {
-		rows = append(rows, wt.row(item, tableValues[i], lengths))
+func (t *Table) rows(tableValues [][]string, lengths []int) (rows []string) {
+	for i, item := range t.Items {
+		rows = append(rows, t.row(item, tableValues[i], lengths))
 	}
 	return
 }
 
-func (wt *Table) row(item map[string]any, rowValues []string, lengths []int) (row string) {
+func (t *Table) row(item map[string]any, rowValues []string, lengths []int) (row string) {
 	cells := []string{}
-	for i := range wt.Keys {
-		cells = append(cells, wt.cell(item, i, rowValues[i], lengths[i]))
+	for i := range t.Keys {
+		cells = append(cells, t.cell(item, i, rowValues[i], lengths[i]))
 	}
 	row = strings.Join(cells, " ")
 	return
 }
 
-func (wt *Table) cell(item map[string]any, i int, value string, length int) (cell string) {
+func (t *Table) cell(item map[string]any, i int, value string, length int) (cell string) {
 	format := fmt.Sprintf("%%-%ds", length)
-	cell = wt.Accents[i](fmt.Sprintf(format, value), item)
+	// if len(value) > length {
+	// 	value = utils.TruncateString(value, length)
+	// }
+	cell = t.Accents[i](fmt.Sprintf(format, value), item)
 	return
 }
 
-func (wt *Table) lengths(tableValues [][]string) (lengths []int) {
-	column := []string{}
-	for i := range wt.Keys {
-		title := wt.Titles[i]
-		for j := range wt.Items {
-			column = append(column, tableValues[j][i])
+func (t *Table) lengths(tableValues [][]string) (lengths []int) {
+	// terminalWidth, _ := utils.TerminalSize()
+	columnValues := []string{}
+	// occupiedChars := 0
+	for i := range t.Keys {
+		title := t.Titles[i]
+		for j := range t.Items {
+			columnValues = append(columnValues, tableValues[j][i])
 		}
-		lengths = append(lengths, wt.longest(title, column))
+		length := t.longest(title, columnValues)
+		// if i < len(t.Keys)-1 && length > 25 {
+		// 	length = 25
+		// }
+		// if length > terminalWidth-occupiedChars-1 || i == len(t.Keys)-1 {
+		// 	length = terminalWidth - occupiedChars - 1
+		// }
+		// if length < 0 {
+		// 	length = 0
+		// }
+		// occupiedChars = occupiedChars + length + 1
+		lengths = append(lengths, length)
 	}
+	logs.Log("TABLE LENGTHS", lengths)
 	return
 }
 
-func (wt *Table) longest(title string, column []string) (max int) {
-	max = len(title)
-	for _, value := range column {
-		if l := len(value); l > max {
-			max = l
-		}
-	}
+func (t *Table) longest(title string, column []string) (max int) {
+	max = utils.LongestString(append(column, title))
 	return
 }
 
-func (wt *Table) headingRow(lengths []int) (heading string) {
+func (t *Table) headingRow(lengths []int) (heading string) {
 	cells := []string{}
-	for i, t := range wt.Titles {
-		cells = append(cells, wt.headingCell(t, lengths[i]))
+	for i, title := range t.Titles {
+		cells = append(cells, t.headingCell(title, lengths[i]))
 	}
 	heading = strings.Join(cells, " ")
 	return
 }
 
-func (wt *Table) headingCell(title string, length int) (val string) {
+func (t *Table) headingCell(title string, length int) (val string) {
 	format := fmt.Sprintf("%%-%ds", length)
 	val = fmt.Sprintf(format, title)
 	return
 }
 
-func (wt *Table) generate() (table map[string]any) {
+func (t *Table) generate() (table map[string]any) {
 	table = map[string]any{}
-	tableValues := wt.tableValues()
-	lengths := wt.lengths(tableValues)
-	lines := []string{wt.headingRow(lengths)}
-	lines = append(lines, wt.rows(tableValues, lengths)...)
-	table["Lines"] = utils.TruncateLines(lines)
-	return
-}
-
-var tableCellStringValueFn func(any) string = func(in any) (out string) {
-	out = in.(string)
+	tableValues := t.tableValues()
+	lengths := t.lengths(tableValues)
+	lines := []string{t.headingRow(lengths)}
+	table["Lines"] = append(lines, t.rows(tableValues, lengths)...)
 	return
 }
 

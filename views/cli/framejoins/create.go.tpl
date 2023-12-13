@@ -1,5 +1,5 @@
 {{ define "framejoins/create" -}}
-{{ with .Result -}}
+{{ with .Payload -}}
 Successfully joined frame {{ .Workspace }} to frame {{ .Parent }}
 {{ end -}}
 {{ end -}}

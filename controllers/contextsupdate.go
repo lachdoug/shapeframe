@@ -11,24 +11,28 @@ type ContextsUpdateParams struct {
 }
 
 type ContextsUpdateResult struct {
-	From *models.UserContextInspector
-	To   *models.UserContextInspector
+	From *ContextsReadResult
+	To   *ContextsReadResult
 }
 
-func ContextsUpdate(jparams []byte) (jbody []byte, err error) {
+func ContextsUpdate(params *Params) (result *Result, err error) {
 	var w *models.Workspace
 	var f *models.Frame
 	var s *models.Shape
-	params := ParamsFor[ContextsUpdateParams](jparams)
+	p := params.Payload.(*ContextsUpdateParams)
 
 	uc := models.ResolveUserContext(
 		"Workspaces", "Workspace", "Frame", "Shape",
 	)
 
-	result := &ContextsUpdateResult{From: uc.Inspect()}
+	r := &ContextsUpdateResult{From: &ContextsReadResult{
+		Workspace: uc.WorkspaceName(),
+		Frame:     uc.FrameName(),
+		Shape:     uc.ShapeName(),
+	}}
 
-	if params.Workspace != "" {
-		if w, err = models.ResolveWorkspace(uc, params.Workspace,
+	if p.Workspace != "" {
+		if w, err = models.ResolveWorkspace(uc, p.Workspace,
 			"Frames",
 		); err != nil {
 			return
@@ -37,8 +41,8 @@ func ContextsUpdate(jparams []byte) (jbody []byte, err error) {
 	} else {
 		uc.Clear("Workspace")
 	}
-	if params.Frame != "" {
-		if f, err = models.ResolveFrame(uc, w, params.Frame,
+	if p.Frame != "" {
+		if f, err = models.ResolveFrame(uc, w, p.Frame,
 			"Shapes",
 		); err != nil {
 			return
@@ -47,8 +51,8 @@ func ContextsUpdate(jparams []byte) (jbody []byte, err error) {
 	} else {
 		uc.Clear("Frame")
 	}
-	if params.Shape != "" {
-		if s, err = models.ResolveShape(uc, f, params.Shape); err != nil {
+	if p.Shape != "" {
+		if s, err = models.ResolveShape(uc, f, p.Shape); err != nil {
 			return
 		}
 		uc.Shape = s
@@ -57,8 +61,11 @@ func ContextsUpdate(jparams []byte) (jbody []byte, err error) {
 	}
 	uc.Save()
 
-	result.To = uc.Inspect()
-
-	jbody = jbodyFor(result)
+	r.To = &ContextsReadResult{
+		Workspace: uc.WorkspaceName(),
+		Frame:     uc.FrameName(),
+		Shape:     uc.ShapeName(),
+	}
+	result = &Result{Payload: r}
 	return
 }

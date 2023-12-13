@@ -1,12 +1,13 @@
 package controllers
 
 import (
+	"sf/app/validations"
 	"sf/models"
 )
 
 type WorkspacesUpdateParams struct {
 	Workspace string
-	Update    map[string]any
+	Updates   map[string]any
 }
 
 type WorkspacesUpdateResult struct {
@@ -20,16 +21,17 @@ type WorkspacesUpdateResultDetails struct {
 	About string
 }
 
-func WorkspacesUpdate(jparams []byte) (jbody []byte, err error) {
+func WorkspacesUpdate(params *Params) (result *Result, err error) {
+	p := params.Payload.(*WorkspacesUpdateParams)
 	var w *models.Workspace
-	params := ParamsFor[WorkspacesUpdateParams](jparams)
+	var vn *validations.Validation
 
-	uc := models.ResolveUserContext("Workspaces")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace); err != nil {
+	uc := models.ResolveUserContext("Workspaces", "Workspace")
+	if w, err = models.ResolveWorkspace(uc, p.Workspace); err != nil {
 		return
 	}
 
-	result := &WorkspacesUpdateResult{
+	r := &WorkspacesUpdateResult{
 		Workspace: w.Name,
 		From: &WorkspacesUpdateResultDetails{
 			Name:  w.Name,
@@ -37,14 +39,16 @@ func WorkspacesUpdate(jparams []byte) (jbody []byte, err error) {
 		},
 	}
 
-	w.Assign(params.Update)
-	w.Save()
+	vn = w.Update(p.Updates)
 
-	result.To = &WorkspacesUpdateResultDetails{
+	r.To = &WorkspacesUpdateResultDetails{
 		Name:  w.Name,
 		About: w.About,
 	}
 
-	jbody = jbodyFor(result)
+	result = &Result{
+		Payload:    r,
+		Validation: vn,
+	}
 	return
 }

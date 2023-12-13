@@ -1,9 +1,7 @@
 {{ define "shapes/update" -}}
-{{ with .Result -}}
+{{ with .Payload -}}
 Successfully updated shape in frame {{ .Frame }} workspace {{ .Workspace }}
-From:
-{{ include "labels/label" (.From) 2 }}
-To:
-{{ include "labels/label" (.To) 2 }}
+From: {{ include "labels/label" (.From) }}
+To: {{ include "labels/label" (.To) }}
 {{ end -}}
 {{ end -}}

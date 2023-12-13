@@ -1,9 +1,9 @@
 {{ define "workspaceinspects/read" -}}
-{{ with .Result -}}
+{{ with .Payload -}}
 Name: {{ .Name }}
 About: {{ .About }}
-{{ include "workspaceinspects/directories" (.Directories) }}
-{{ include "workspaceinspects/repositories" (.Repositories) }}
-{{ include "workspaceinspects/frames" (.Frames) }}
+Directories: {{ include "workspaceinspects/directories" .Directories 2 0 }}
+Repositories: {{ include "workspaceinspects/repositories" .Repositories 2 0 }}
+Frames: {{ include "workspaceinspects/frames" .Frames 2 0 }}
 {{ end -}}
 {{ end -}}

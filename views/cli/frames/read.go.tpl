@@ -1,12 +1,11 @@
 {{ define "frames/read" -}}
-{{ with .Result -}}
+{{ with .Payload -}}
 Name: {{ .Name }}
 About: {{ .About }}
 Workspace: {{ .Workspace }}
-Parent: {{ if eq .Parent "" }}<none>
-{{ else }}{{ .Parent }}{{ end }}
+Parent: {{ if eq .Parent "" }}<none>{{ else }}{{ .Parent }}{{ end }}
 Framer: {{ .Framer }}
-{{ include "configurations/configuration" (.Configuration) }}
-{{ include "frames/shapes" (.Shapes) }}
+Configuration: {{ include "configurations/configuration" .Configuration }}
+Shapes: {{ include "frames/shapes" .Shapes }}
 {{ end -}}
 {{ end -}}

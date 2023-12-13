@@ -1,7 +1,9 @@
 package models
 
 import (
-	"sf/app"
+	"sf/app/errors"
+	"sf/app/repos"
+	"sf/app/streams"
 	"sf/utils"
 )
 
@@ -13,12 +15,13 @@ type GitRepo struct {
 }
 
 type GitRepoInspector struct {
-	Path    string
-	URI     string
-	URL     string
-	Branch  string
-	Shapers []*ShaperInspector
-	Framers []*FramerInspector
+	Path     string
+	URI      string
+	URL      string
+	Branch   string
+	Branches []string
+	Shapers  []*ShaperInspector
+	Framers  []*FramerInspector
 }
 
 // Construct
@@ -37,6 +40,7 @@ func (g *GitRepo) Inspect() (gri *GitRepoInspector, err error) {
 	var uri string
 	var url string
 	var branch string
+	var branches []string
 	if uri, err = g.URI(); err != nil {
 		return
 	}
@@ -46,13 +50,17 @@ func (g *GitRepo) Inspect() (gri *GitRepoInspector, err error) {
 	if branch, err = g.Branch(); err != nil {
 		return
 	}
+	if branches, err = g.Branches(); err != nil {
+		return
+	}
 	gri = &GitRepoInspector{
-		Path:    g.Path,
-		URI:     uri,
-		URL:     url,
-		Branch:  branch,
-		Shapers: g.ShapersInspect(),
-		Framers: g.FramersInspect(),
+		Path:     g.Path,
+		URI:      uri,
+		URL:      url,
+		Branch:   branch,
+		Branches: branches,
+		Shapers:  g.ShapersInspect(),
+		Framers:  g.FramersInspect(),
 	}
 	return
 }
@@ -92,16 +100,18 @@ func (g *GitRepo) remove() {
 	utils.RemoveDir(g.Path)
 }
 
-func (g *GitRepo) clone(url string, username string, password string, st *utils.Stream) {
-	utils.GitClone(g.Path, url, username, password, st)
+func (g *GitRepo) clone(url string, username string, password string, st *streams.Stream) {
+	repos.GitClone(g.Path, url, username, password, st)
 }
 
-func (g *GitRepo) pull(username string, password string, st *utils.Stream) {
-	utils.GitPull(g.Path, username, password, st)
+func (g *GitRepo) pull(username string, password string, st *streams.Stream) {
+	repos.GitPull(g.Path, username, password, st)
 }
 
 func (g *GitRepo) checkout(branch string) (err error) {
-	err = utils.GitCheckout(g.Path, branch)
+	if err = repos.GitCheckout(g.Path, branch); err != nil {
+		err = errors.ErrorWrapf(err, "checkout %s", branch)
+	}
 	return
 }
 
@@ -109,28 +119,28 @@ func (g *GitRepo) checkout(branch string) (err error) {
 
 func (g *GitRepo) URI() (url string, err error) {
 	if url, err = utils.GitURI(g.Path); err != nil {
-		err = app.ErrorWrapf(err, "gitrepo uri")
+		err = errors.ErrorWrap(err, "gitrepo uri")
 	}
 	return
 }
 
 func (g *GitRepo) URL() (url string, err error) {
 	if url, err = utils.GitURL(g.Path); err != nil {
-		err = app.ErrorWrapf(err, "gitrepo url")
+		err = errors.ErrorWrap(err, "gitrepo url")
 	}
 	return
 }
 
 func (g *GitRepo) Branch() (branch string, err error) {
-	if branch, err = utils.GitBranch(g.Path); err != nil {
-		err = app.ErrorWrapf(err, "gitrepo branch")
+	if branch, err = repos.GitBranch(g.Path); err != nil {
+		err = errors.ErrorWrap(err, "gitrepo branch")
 	}
 	return
 }
 
 func (g *GitRepo) Branches() (branches []string, err error) {
-	if branches, err = utils.GitBranches(g.Path); err != nil {
-		err = app.ErrorWrapf(err, "gitrepo branches")
+	if branches, err = repos.GitBranches(g.Path); err != nil {
+		err = errors.ErrorWrap(err, "gitrepo branches")
 	}
 	return
 }

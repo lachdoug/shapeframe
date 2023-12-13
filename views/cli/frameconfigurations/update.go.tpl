@@ -1,14 +1,8 @@
 {{ define "frameconfigurations/update" -}}
-{{ with .Result -}}
-Successfully configured frame {{ .Frame }} in workspace {{ .Workspace }}
-{{ with .From -}}
-From:
-{{ include "configurations/configuration" (.Configuration) 2 }}
-{{ end -}}
-{{ with .To -}}
-To:
-{{ include "configurations/configuration" (.Configuration) 2 }}
-{{ end -}}
+{{ with .Payload -}}
+Successfully configured settings for frame {{ .Frame }} in workspace {{ .Workspace }}
+From: {{ include "configurations/configuration" .From }}
+To: {{ include "configurations/configuration" .To }}
 {{ end -}}
 {{ end -}}
 

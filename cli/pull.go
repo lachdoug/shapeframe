@@ -1,11 +1,9 @@
 package cli
 
 import (
-	"sf/app"
+	"sf/app/io"
 	"sf/cli/cliapp"
-	"sf/cli/prompting"
 	"sf/controllers"
-	"sf/models"
 )
 
 func pull() (command any) {
@@ -29,46 +27,34 @@ func pull() (command any) {
 			"string", "username u", "Username for git pull",
 			"string", "password p", "Password for git pull",
 		),
-		Parametizer: pullParams,
-		Controller:  controllers.RepositoryPullsCreate,
-		Viewer:      pullViewer,
+		Handler:    pullHandler,
+		Controller: controllers.RepositoryPullsCreate,
+		Viewer:     pullViewer,
 	}
 	return
 }
 
-func pullParams(context *cliapp.Context) (jparams []byte, err error) {
-	var w *models.Workspace
-	uri := context.Argument(0)
-	workspace := context.StringFlag("workspace")
-	username := context.StringFlag("username")
-	password := context.StringFlag("password")
-
-	uc := models.ResolveUserContext("Workspace", "Workspaces")
-	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
-		return
+func pullHandler(context *cliapp.Context) (params *controllers.Params, err error) {
+	params = &controllers.Params{
+		Payload: &controllers.RepositoryPullsCreateParams{
+			Workspace: context.StringFlag("workspace"),
+			URI:       context.Argument(0),
+			Username:  context.StringFlag("username"),
+			Password:  context.StringFlag("password"),
+		},
 	}
-
-	if uri == "" {
-		if uri, err = prompting.RepositoryURI(w); err != nil {
-			return
-		}
-	}
-
-	jparams = jsonParams(map[string]any{
-		"Workspace": w.Name,
-		"URI":       uri,
-		"Username":  username,
-		"Password":  password,
-	})
 	return
 }
 
-func pullViewer(body map[string]any) (output string, err error) {
-	result := resultItem(body)
-	app.Printf("Pull %s\n", result["URL"])
-	if err = stream(body); err != nil {
+func pullViewer(result *controllers.Result) (output string, err error) {
+	r := result.Payload.(*controllers.RepositoryPullsCreateResult)
+
+	// Stream pull output
+	io.Printf("Pull %s\n", r.URL)
+	if err = result.Stream.Print(); err != nil {
 		return
 	}
-	output, err = cliapp.View("repositorypulls/create")(body)
+
+	output, err = cliapp.View("repositorypulls/create")(result)
 	return
 }

@@ -3,7 +3,6 @@ package cli
 import (
 	"sf/cli/cliapp"
 	"sf/controllers"
-	"sf/models"
 )
 
 func getFrame() (command any) {
@@ -21,43 +20,24 @@ func getFrame() (command any) {
 		Flags: ss(
 			"string", "workspace", "Name of the workspace",
 		),
-		Parametizer: getFrameParams,
-		Controller:  controllers.FramesRead,
+		Handler:    getFrameHandler,
+		Controller: controllers.FramesRead,
 		Viewer: cliapp.View(
 			"frames/read",
 			"frames/shapes",
 			"configurations/configuration",
-			"configurations/setting",
+			"configurations/datum",
 		),
 	}
 	return
 }
 
-func getFrameParams(context *cliapp.Context) (jparams []byte, err error) {
-	var w *models.Workspace
-	var f *models.Frame
-	frame := context.Argument(0)
-	workspace := context.StringFlag("workspace")
-
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace", "Frame",
-	)
-	if w, err = models.ResolveWorkspace(uc, workspace,
-		"Frames",
-	); err != nil {
-		return
+func getFrameHandler(context *cliapp.Context) (params *controllers.Params, err error) {
+	params = &controllers.Params{
+		Payload: &controllers.FramesReadParams{
+			Workspace: context.StringFlag("workspace"),
+			Frame:     context.Argument(0),
+		},
 	}
-	if f, err = models.ResolveFrame(uc, w, frame,
-		"Configuration",
-	); err != nil {
-		return
-	}
-
-	params := map[string]any{
-		"Workspace": w.Name,
-		"Frame":     f.Name,
-	}
-
-	jparams = jsonParams(params)
 	return
 }

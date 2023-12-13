@@ -9,25 +9,27 @@ type FramesReadParams struct {
 	Frame     string
 }
 
-func FramesRead(jparams []byte) (jbody []byte, err error) {
+func FramesRead(params *Params) (result *Result, err error) {
 	var w *models.Workspace
 	var f *models.Frame
-	params := ParamsFor[FramesReadParams](jparams)
+	p := params.Payload.(*FramesReadParams)
 
-	uc := models.ResolveUserContext("Workspaces")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+	uc := models.ResolveUserContext(
+		"Workspaces", "Workspace", "Frame",
+	)
+	if w, err = models.ResolveWorkspace(uc, p.Workspace,
 		"Frames",
 	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, params.Frame,
+	if f, err = models.ResolveFrame(uc, w, p.Frame,
 		"Workspace", "Configuration", "Shapes", "Parent",
 	); err != nil {
 		return
 	}
 
-	result := f.Read()
-
-	jbody = jbodyFor(result)
+	result = &Result{
+		Payload: f.Read(),
+	}
 	return
 }

@@ -3,7 +3,6 @@ package cli
 import (
 	"sf/cli/cliapp"
 	"sf/controllers"
-	"sf/models"
 )
 
 func removeDirectory() (command any) {
@@ -20,28 +19,19 @@ func removeDirectory() (command any) {
 		Flags: ss(
 			"string", "workspace", "Workspace name",
 		),
-		Parametizer: removeDirectoryParams,
-		Controller:  controllers.DirectoriesDestroy,
-		Viewer:      cliapp.View("directories/destroy"),
+		Handler:    removeDirectoryHandler,
+		Controller: controllers.DirectoriesDelete,
+		Viewer:     cliapp.View("directories/delete"),
 	}
 	return
 }
 
-func removeDirectoryParams(context *cliapp.Context) (jparams []byte, err error) {
-	var w *models.Workspace
-	path := context.Argument(0)
-	workspace := context.StringFlag("workspace")
-
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace",
-	)
-	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
-		return
+func removeDirectoryHandler(context *cliapp.Context) (params *controllers.Params, err error) {
+	params = &controllers.Params{
+		Payload: &controllers.DirectoriesDeleteParams{
+			Workspace: context.StringFlag("workspace"),
+			Path:      context.Argument(0),
+		},
 	}
-
-	jparams = jsonParams(map[string]any{
-		"Workspace": w.Name,
-		"Path":      path,
-	})
 	return
 }

@@ -1,62 +1,38 @@
 package cli
 
 import (
-	"encoding/json"
-	"sf/app"
-	"sf/utils"
-
-	"github.com/fatih/color"
+	"fmt"
+	"sf/app/io"
 )
 
-// Marshal a params map as JSON
-func jsonParams(m map[string]any) (j []byte) {
-	j, err := json.Marshal(m)
-	if err != nil {
-		panic(err)
-	}
-	return
-}
+// // Marshal a params map as JSON
+// func jsonParams(m map[string]any) (j []byte) {
+// 	var err error
+// 	if j, err = json.Marshal(m); err != nil {
+// 		panic(err)
+// 	}
+// 	return
+// }
 
-// Take a result item and typecast it as a map
-func resultItem(body map[string]any) (item map[string]any) {
-	item = body["Result"].(map[string]any)
-	return
-}
+// // Take a result item and typecast it as a map
+// func resultItem(body map[string]any) (item map[string]any) {
+// 	item = body["Result"].(map[string]any)
+// 	return
+// }
 
-// Take a result collection and typecast items as maps
-func resultItems(body map[string]any) (items []map[string]any) {
-	ris := body["Result"].([]any)
-	for _, ri := range ris {
-		items = append(items, ri.(map[string]any))
-	}
-	return
-}
-
-func stream(body map[string]any) (err error) {
-	s := utils.StreamLoad(body["Stream"].(string))
-	hideCursor()
-	defer showCursor()
-	if err = s.ReadOut(app.Out, app.Err); err != nil {
-		err = app.ErrorWrap(err)
-		return
-	}
-	return
-}
+// // Take a result collection and typecast items as maps
+// func resultItems(body map[string]any) (items []map[string]any) {
+// 	ris := body["Result"].([]any)
+// 	for _, ri := range ris {
+// 		items = append(items, ri.(map[string]any))
+// 	}
+// 	return
+// }
 
 // Add green color codes to text
-func green(text string) (green string) {
-	green = color.New(color.FgGreen).Sprint(text)
+func green(in string) (out string) {
+	out = fmt.Sprintf("%s%s%s", io.GreenColor, in, io.ResetText)
 	return
-}
-
-// Hide terminal cursor
-func hideCursor() {
-	app.Print("\033[?25l")
-}
-
-// Show terminal cursor
-func showCursor() {
-	app.Print("\033[?25h")
 }
 
 // Slice of strings

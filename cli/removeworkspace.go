@@ -3,7 +3,6 @@ package cli
 import (
 	"sf/cli/cliapp"
 	"sf/controllers"
-	"sf/models"
 )
 
 func removeWorkspace() (command any) {
@@ -12,30 +11,22 @@ func removeWorkspace() (command any) {
 		Summary: "Remove a workspace",
 		Aliases: ss("w"),
 		Usage: ss(
-			"sf remove workspace [options] [name]",
+			"sf remove workspace [options] [workspace]",
 			"Provide an optional workspace name as an argument",
 			"  Uses workspace context when not provided",
 		),
-		Parametizer: removeWorkspaceParams,
-		Controller:  controllers.WorkspacesDestroy,
-		Viewer:      cliapp.View("workspaces/destroy"),
+		Handler:    removeWorkspaceHandler,
+		Controller: controllers.WorkspacesDelete,
+		Viewer:     cliapp.View("workspaces/delete"),
 	}
 	return
 }
 
-func removeWorkspaceParams(context *cliapp.Context) (jparams []byte, err error) {
-	var w *models.Workspace
-	workspace := context.Argument(0)
-
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace",
-	)
-	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
-		return
+func removeWorkspaceHandler(context *cliapp.Context) (params *controllers.Params, err error) {
+	params = &controllers.Params{
+		Payload: &controllers.WorkspacesDeleteParams{
+			Workspace: context.Argument(0),
+		},
 	}
-
-	jparams = jsonParams(map[string]any{
-		"Workspace": w.Name,
-	})
 	return
 }

@@ -3,7 +3,6 @@ package cli
 import (
 	"sf/cli/cliapp"
 	"sf/controllers"
-	"sf/models"
 )
 
 func listShapes() (command any) {
@@ -14,54 +13,47 @@ func listShapes() (command any) {
 		Usage: ss(
 			"sf list shapes [options]",
 			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
-			"List shapes in all workspaces by setting the -all flag",
-			"  Otherwise lists shapes in workspace context",
-			"  Overrides -workspace flag",
+			"Provide an optional frame name using the -frame flag",
 		),
 		Flags: ss(
 			"string", "workspace", "Workspace name",
-			"bool", "all", "All workspaces",
+			"string", "frame", "Frame name",
 		),
-		Parametizer: listShapesParams,
-		Controller:  controllers.ShapesIndex,
-		Viewer:      listShapesViewer,
+		Handler:    listShapesHandler,
+		Controller: controllers.ShapesIndex,
+		Viewer:     listShapesViewer,
 	}
 	return
 }
 
-func listShapesParams(context *cliapp.Context) (jparams []byte, err error) {
-	var w *models.Workspace
-	all := context.BoolFlag("all")
-	workspace := context.StringFlag("workspace")
-	params := map[string]any{}
-
-	if !all {
-		uc := models.ResolveUserContext(
-			"Workspaces", "Workspace",
-		)
-		if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
-			return
-		}
-		params["Workspace"] = w.Name
+func listShapesHandler(context *cliapp.Context) (params *controllers.Params, err error) {
+	params = &controllers.Params{
+		Payload: &controllers.ShapesIndexParams{
+			Workspace: context.StringFlag("workspace"),
+			Frame:     context.StringFlag("frame"),
+		},
 	}
-
-	jparams = jsonParams(params)
 	return
 }
 
-func listShapesViewer(body map[string]any) (output string, err error) {
+func listShapesViewer(result *controllers.Result) (output string, err error) {
+	rs := result.Payload.([]*controllers.ShapesIndexItemResult)
+	items := []map[string]any{}
+	for _, r := range rs {
+		items = append(items, map[string]any{
+			"Workspace": r.Workspace,
+			"Frame":     r.Frame,
+			"Shape":     r.Shape,
+			"Shaper":    r.Shaper,
+			"About":     r.About,
+			"IsContext": r.IsContext,
+		})
+	}
+
 	table := &Table{
-		Items:  resultItems(body),
-		Titles: ss("SHAPE", "FRAME", "WORKSPACE", "SHAPER", "ABOUT"),
-		Keys:   ss("Name", "Frame", "Workspace", "Shaper", "About"),
-		Values: tvs(
-			tableCellStringValueFn,
-			tableCellStringValueFn,
-			tableCellStringValueFn,
-			tableCellStringValueFn,
-			tableCellStringValueFn,
-		),
+		Items:  items,
+		Titles: ss("WORKSPACE", "FRAME", "SHAPE", "SHAPER", "ABOUT"),
+		Keys:   ss("Workspace", "Frame", "Shape", "Shaper", "About"),
 		Accents: tas(
 			tableCellGreenIfInContextAccentFn,
 			tableCellGreenIfInContextAccentFn,
@@ -70,6 +62,10 @@ func listShapesViewer(body map[string]any) (output string, err error) {
 			tableCellNoAccentFn,
 		),
 	}
-	output, err = cliapp.View("shapes/index")(table.generate())
+
+	result = &controllers.Result{
+		Payload: table.generate(),
+	}
+	output, err = cliapp.View("shapes/index")(result)
 	return
 }

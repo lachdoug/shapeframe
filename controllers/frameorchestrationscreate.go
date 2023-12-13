@@ -1,8 +1,8 @@
 package controllers
 
 import (
+	"sf/app/streams"
 	"sf/models"
-	"sf/utils"
 )
 
 type FrameOrchestrationsCreateParams struct {
@@ -15,30 +15,33 @@ type FrameOrchestrationsCreateResult struct {
 	Frame     string
 }
 
-func FrameOrchestrationsCreate(jparams []byte) (jbody []byte, err error) {
+func FrameOrchestrationsCreate(params *Params) (result *Result, err error) {
 	var w *models.Workspace
 	var f *models.Frame
-	params := ParamsFor[FrameOrchestrationsCreateParams](jparams)
-	st := utils.StreamCreate()
+	p := params.Payload.(*FrameOrchestrationsCreateParams)
+	st := streams.StreamCreate()
 
-	uc := models.ResolveUserContext("Workspaces")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+	uc := models.ResolveUserContext(
+		"Workspaces", "Workspace", "Frame",
+	)
+	if w, err = models.ResolveWorkspace(uc, p.Workspace,
 		"Frames",
 	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, params.Frame,
+	if f, err = models.ResolveFrame(uc, w, p.Frame,
 		"Configuration", "Shapes.Configuration",
 	); err != nil {
 		return
 	}
-	f.Orchestrate(st)
+	f.Apply(st)
 
-	result := &FrameOrchestrationsCreateResult{
-		Workspace: w.Name,
-		Frame:     f.Name,
+	result = &Result{
+		Payload: &FrameOrchestrationsCreateResult{
+			Workspace: w.Name,
+			Frame:     f.Name,
+		},
+		Stream: st,
 	}
-
-	jbody = jbodyFor(result, nil, st)
 	return
 }

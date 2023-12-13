@@ -3,7 +3,6 @@ package cli
 import (
 	"sf/cli/cliapp"
 	"sf/controllers"
-	"sf/models"
 )
 
 func listFramers() (command any) {
@@ -14,58 +13,51 @@ func listFramers() (command any) {
 		Usage: ss(
 			"sf list framers [options]",
 			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
-			"List framers in all workspaces by setting the -all flag",
-			"  Otherwise lists framers in workspace context",
-			"  Overrides -workspace flag",
 		),
 		Flags: ss(
 			"string", "workspace", "Workspace name",
-			"bool", "all", "All workspaces",
 		),
-		Parametizer: listFramersParams,
-		Controller:  controllers.FramersIndex,
-		Viewer:      listFramersViewer,
+		Handler:    listFramersHandler,
+		Controller: controllers.FramersIndex,
+		Viewer:     listFramersViewer,
 	}
 	return
 }
 
-func listFramersParams(context *cliapp.Context) (jparams []byte, err error) {
-	var w *models.Workspace
-	all := context.BoolFlag("all")
-	workspace := context.StringFlag("workspace")
-	params := map[string]any{}
-
-	if !all {
-		uc := models.ResolveUserContext(
-			"Workspaces", "Workspace",
-		)
-		if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
-			return
-		}
-		params["Workspace"] = w.Name
+func listFramersHandler(context *cliapp.Context) (params *controllers.Params, err error) {
+	params = &controllers.Params{
+		Payload: &controllers.FramersIndexParams{
+			Workspace: context.StringFlag("workspace"),
+		},
 	}
-
-	jparams = jsonParams(params)
 	return
 }
 
-func listFramersViewer(body map[string]any) (output string, err error) {
+func listFramersViewer(result *controllers.Result) (output string, err error) {
+	rs := result.Payload.([]*controllers.FramersIndexItemResult)
+	items := []map[string]any{}
+	for _, r := range rs {
+		items = append(items, map[string]any{
+			"Workspace": r.Workspace,
+			"URI":       r.About,
+			"About":     r.About,
+		})
+	}
+
 	table := &Table{
-		Items:  resultItems(body),
+		Items:  items,
 		Titles: ss("WORKSPACE", "FRAMER", "ABOUT"),
 		Keys:   ss("Workspace", "URI", "About"),
-		Values: tvs(
-			tableCellStringValueFn,
-			tableCellStringValueFn,
-			tableCellStringValueFn,
-		),
 		Accents: tas(
 			tableCellNoAccentFn,
 			tableCellNoAccentFn,
 			tableCellNoAccentFn,
 		),
 	}
-	output, err = cliapp.View("framers/index")(table.generate())
+
+	result = &controllers.Result{
+		Payload: table.generate(),
+	}
+	output, err = cliapp.View("framers/index")(result)
 	return
 }

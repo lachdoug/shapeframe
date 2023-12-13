@@ -2,7 +2,7 @@ package models
 
 import (
 	"path/filepath"
-	"sf/app"
+	"sf/app/errors"
 	"sf/database/queries"
 	"sf/utils"
 	"slices"
@@ -174,7 +174,7 @@ func (wl *WorkspaceLoader) setRepositories() (err error) {
 
 func (wl *WorkspaceLoader) repositoryURIs() (dirPaths []string, err error) {
 	if dirPaths, err = utils.GitURIs(filepath.Join(wl.Workspace.directory(), "repos")); err != nil {
-		err = app.ErrorWrapf(err, "repository URIs")
+		err = errors.ErrorWrap(err, "repository URIs")
 		return
 	}
 	return

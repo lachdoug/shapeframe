@@ -1,4 +1,5 @@
 {{ define "framers/index" -}}
+{{ with .Payload -}}
 {{ $lines := .Lines -}}
 {{ if le (len $lines) 1 -}}
 No framers
@@ -8,4 +9,4 @@ No framers
 {{ end -}}
 {{ end -}}
 {{ end -}}
-
+{{ end -}}

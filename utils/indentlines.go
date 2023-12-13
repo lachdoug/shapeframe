@@ -1,6 +1,8 @@
 package utils
 
-import "strings"
+import (
+	"strings"
+)
 
 func IndentLines(in string, indents ...int) (out string) {
 	lines := strings.Split(in, "\n")

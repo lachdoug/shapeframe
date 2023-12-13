@@ -12,7 +12,7 @@ var isContextReadAction bool
 func context() (command any) {
 	command = &cliapp.Command{
 		Name:    "context",
-		Summary: "Report context",
+		Summary: "Report or change context",
 		Aliases: ss("cx"),
 		Usage: ss(
 			"sf context [options] [arguments]",
@@ -22,23 +22,24 @@ func context() (command any) {
 			"  A name will enter a level of context",
 			"  For example, if context is",
 			"    Workspace: Workspace-A",
-			"	 Frame: Frame-AB",
+			"    Frame: Frame-AB",
 			"  sf ../Workspace-B/Frame-BB or sf /Workspace-B/Frame-BB",
 			"  Will change context to",
 			"    Workspace: Workspace-B",
-			"	 Frame: Frame-BB",
+			"    Frame: Frame-BB",
 		),
-		Parametizer: contextParams,
-		Controller:  contextController,
-		Viewer:      contextViewer,
+		Handler:    contextHandler,
+		Controller: contextController,
+		Viewer:     contextViewer,
 	}
 	return
 }
 
-func contextParams(context *cliapp.Context) (jparams []byte, err error) {
+func contextHandler(context *cliapp.Context) (params *controllers.Params, err error) {
 	var abs bool
+	var workspace, frame, shape string
+	contexts := []string{}
 	path := context.Argument(0)
-	params := map[string]any{}
 
 	if len(path) == 0 {
 		// If no path is given, read the context
@@ -53,7 +54,6 @@ func contextParams(context *cliapp.Context) (jparams []byte, err error) {
 		uc := models.ResolveUserContext(
 			"Workspace", "Frame", "Shape",
 		)
-		contexts := []string{}
 
 		if abs {
 			args = args[1:]
@@ -74,37 +74,44 @@ func contextParams(context *cliapp.Context) (jparams []byte, err error) {
 			}
 		}
 		if len(contexts) > 0 {
-			params["Workspace"] = contexts[0]
+			workspace = contexts[0]
 		}
 		if len(contexts) > 1 {
-			params["Frame"] = contexts[1]
+			frame = contexts[1]
 		}
 		if len(contexts) > 2 {
-			params["Shape"] = contexts[2]
+			shape = contexts[2]
 		}
 
+		params = &controllers.Params{
+			Payload: &controllers.ContextsUpdateParams{
+				Workspace: workspace,
+				Frame:     frame,
+				Shape:     shape,
+			},
+		}
 	}
-
-	jparams = jsonParams(params)
 	return
 }
 
-func contextController(jparams []byte) (jbody []byte, err error) {
+func contextController(params *controllers.Params) (result *controllers.Result, err error) {
 	if isContextReadAction {
-		return controllers.ContextsRead(jparams)
+		result, err = controllers.ContextsRead(params)
+		return
 	}
-	return controllers.ContextsUpdate(jparams)
+	result, err = controllers.ContextsUpdate(params)
+	return
 }
 
-func contextViewer(body map[string]any) (output string, err error) {
+func contextViewer(result *controllers.Result) (output string, err error) {
 	if isContextReadAction {
 		return cliapp.View(
 			"contexts/read",
 			"contexts/context",
-		)(body)
+		)(result)
 	}
 	return cliapp.View(
 		"contexts/update",
 		"contexts/context",
-	)(body)
+	)(result)
 }

@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"sf/app"
+	"sf/app/validations"
 	"sf/models"
 )
 
@@ -9,57 +9,57 @@ type ShapeConfigurationsUpdateParams struct {
 	Workspace string
 	Frame     string
 	Shape     string
-	Update    map[string]any
+	Updates   map[string]string
 }
 
 type ShapeConfigurationsUpdateResult struct {
-	Workspace     string
-	Frame         string
-	Shape         string
-	Configuration []map[string]any
+	Workspace string
+	Frame     string
+	Shape     string
+	From      []map[string]string
+	To        []map[string]string
 }
 
-func ShapeConfigurationsUpdate(jparams []byte) (jbody []byte, err error) {
+func ShapeConfigurationsUpdate(params *Params) (result *Result, err error) {
+	p := params.Payload.(*ShapeConfigurationsUpdateParams)
 	var w *models.Workspace
 	var f *models.Frame
 	var s *models.Shape
-	var vn *app.Validation
-	params := ParamsFor[ShapeConfigurationsUpdateParams](jparams)
+	var vn *validations.Validation
 
-	uc := models.ResolveUserContext("Workspaces")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+	uc := models.ResolveUserContext(
+		"Workspaces", "Workspace", "Frame", "Shape",
+	)
+	if w, err = models.ResolveWorkspace(uc, p.Workspace,
 		"Frames",
 	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, params.Frame,
+	if f, err = models.ResolveFrame(uc, w, p.Frame,
 		"Shapes",
 	); err != nil {
 		return
 	}
-	if s, err = models.ResolveShape(uc, f, params.Shape,
+	if s, err = models.ResolveShape(uc, f, p.Shape,
 		"Configuration",
 	); err != nil {
 		return
 	}
 
-	result := &ShapesUpdateResult{
+	r := &ShapeConfigurationsUpdateResult{
 		Workspace: w.Name,
 		Frame:     f.Name,
 		Shape:     s.Name,
-		From: &ShapesUpdateResultDetails{
-			Configuration: s.Configuration.Details(),
-		},
+		From:      s.ShapeConfiguration.Info(),
 	}
 
-	if vn, err = s.Configuration.Update(params.Update); err != nil {
-		return
-	}
+	vn = s.ShapeConfiguration.Update(p.Updates)
 
-	result.To = &ShapesUpdateResultDetails{
-		Configuration: s.Configuration.Details(),
-	}
+	r.To = s.ShapeConfiguration.Info()
 
-	jbody = jbodyFor(result, vn)
+	result = &Result{
+		Payload:    r,
+		Validation: vn,
+	}
 	return
 }

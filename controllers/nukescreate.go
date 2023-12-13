@@ -4,7 +4,9 @@ import (
 	"sf/utils"
 )
 
-func NukesCreate(jparams []byte) (jbody []byte, err error) {
+func NukesCreate(params *Params) (result *Result, err error) {
 	utils.RemoveDir(utils.DataDir("."))
+	utils.RemoveDir(utils.TempDir("."))
+	utils.RemoveDir(utils.LogDir("."))
 	return
 }

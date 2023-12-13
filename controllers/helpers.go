@@ -1,27 +1,36 @@
 package controllers
 
-import (
-	"sf/app"
-	"sf/utils"
-)
+// import (
+// 	"sf/app/streams"
+// 	"sf/app/validations"
+// 	"sf/utils"
+// )
 
-func ParamsFor[T any](jparams []byte) (params *T) {
-	params = new(T)
-	utils.JsonUnmarshal(jparams, &params)
-	return
-}
+// func ParamsFor[T any](jparams []byte) (params *T) {
+// 	params = new(T)
+// 	utils.JsonUnmarshal(jparams, &params)
+// 	return
+// }
 
-func jbodyFor(result any, opts ...any) (j []byte) {
-	body := &app.Body{Result: result}
+// func resultFor(payload any, opts ...any) (j []byte) {
+// 	result := &Result{Payload: payload}
+// 	if len(opts) > 0 && opts[0] != nil {
+// 		result.Validation = opts[0].(*validations.Validation)
+// 	}
+// 	if len(opts) > 1 {
+// 		result.Stream = opts[1].(*streams.Stream)
+// 	}
+// 	return
+// }
 
-	if len(opts) > 0 && opts[0] != nil {
-		vmap := opts[0].(*app.Validation).Map()
-		body.Invalid = vmap
-	}
-	if len(opts) > 1 {
-		st := opts[1].(*utils.Stream).Identifier
-		body.Stream = st
-	}
-	j = utils.JsonMarshal(body)
-	return
-}
+// // func bodyFor(payload any, opts ...any) (b *app.Body) {
+// // 	body := &Result{Payload: payload}
+// // 	if len(opts) > 0 && opts[0] != nil {
+// // 		body.Invalid = opts[0].(*validations.Validation).Maps()
+// // 	}
+// // 	if len(opts) > 1 {
+// // 		st := opts[1].(*streams.Stream).Identifier
+// // 		body.Stream = st
+// // 	}
+// // 	return
+// // }

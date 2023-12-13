@@ -1,9 +1,9 @@
 {{ define "workspaces/read" -}}
-{{ with .Result -}}
+{{ with .Payload -}}
 Name: {{ .Name }}
 About: {{ .About }}
-{{ include "workspaces/directories" (.Directories) }}
-{{ include "workspaces/repositories" (.Repositories) }}
-{{ include "workspaces/frames" (.Frames) }}
+Directories: {{ include "workspaces/directories" .Directories }}
+Repositories: {{ include "workspaces/repositories" .Repositories }}
+Frames: {{ include "workspaces/frames" .Frames }}
 {{ end -}}
 {{ end -}}

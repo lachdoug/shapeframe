@@ -1,13 +1,7 @@
 {{ define "shapeconfigurations/update" -}}
-{{ with .Result -}}
-Successfully configured shape {{ .Shape }} in frame {{ .Frame }} workspace {{ .Workspace }}
-{{ with .From -}}
-From:
-{{ include "configurations/configuration" (.Configuration) 2 }}
-{{ end -}}
-{{ with .To -}}
-To:
-{{ include "configurations/configuration" (.Configuration) 2 }}
-{{ end -}}
+{{ with .Payload -}}
+Successfully configured settings for shape {{ .Shape }} in frame {{ .Frame }} workspace {{ .Workspace }}
+From: {{ include "configurations/configuration" .From }}
+To: {{ include "configurations/configuration" .To }}
 {{ end -}}
 {{ end -}}

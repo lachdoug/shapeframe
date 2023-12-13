@@ -1,7 +1,9 @@
 package models
 
 import (
-	"slices"
+	"sf/utils"
+
+	"golang.org/x/exp/slices"
 )
 
 type ConfigurationLoader struct {
@@ -19,9 +21,9 @@ func NewConfigurationLoader(c *Configuration, loads []string) (cl *Configuration
 	return
 }
 
-func (cl *ConfigurationLoader) load() (err error) {
+func (cl *ConfigurationLoader) load() {
 	cl.settle()
-	err = cl.assign()
+	cl.assign()
 	return
 }
 
@@ -31,25 +33,22 @@ func (cl *ConfigurationLoader) settle() {
 	}
 }
 
-func (cl *ConfigurationLoader) assign() (err error) {
-	if err = cl.loadForm(); err != nil {
-		return
-	}
-	return
+func (cl *ConfigurationLoader) assign() {
+	cl.loadSettings()
+	cl.loadForm()
 }
 
-func (cl *ConfigurationLoader) loadForm() (err error) {
-	if slices.Contains(cl.Loads, "Form") {
-		if err = cl.setForm(); err != nil {
-			return
-		}
+func (cl *ConfigurationLoader) loadSettings() {
+	ss := map[string]string{}
+	json := cl.Configuration.SettingsJSON.String()
+	if json != "" {
+		utils.JsonUnmarshal([]byte(json), &ss)
 	}
-	return
+	cl.Configuration.Settings = ss
 }
 
-func (cl *ConfigurationLoader) setForm() (err error) {
-	schema := cl.Configuration.FormSchema()
-	settings := cl.Configuration.Settings()
-	cl.Configuration.Form = NewForm(schema, settings)
-	return
+func (cl *ConfigurationLoader) loadForm() {
+	if cl.Form {
+		cl.Configuration.loadFormComponents()
+	}
 }

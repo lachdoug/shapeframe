@@ -2,5 +2,7 @@
 Name: {{ .Name }}
 About: {{ .About }}
 Shaper: {{ .Shaper }}
-{{ include "configurations/configuration" (.Configuration) }}
+Configuration:
+  Shape: {{ include "configurations/configuration" .ShapeSettings 4 0 }}
+  FrameShape: {{ include "configurations/configuration" .FrameShapeSettings 4 0 }}
 {{ end -}}

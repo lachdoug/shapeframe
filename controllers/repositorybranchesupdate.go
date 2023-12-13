@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"sf/models"
-	"sf/utils"
 )
 
 type RepositoryBranchesUpdateParams struct {
@@ -17,39 +16,32 @@ type RepositoryBranchesUpdateResult struct {
 	Branch    string
 }
 
-func RepositoryBranchesUpdate(jparams []byte) (jbody []byte, err error) {
+func RepositoryBranchesUpdate(params *Params) (result *Result, err error) {
+	p := params.Payload.(*RepositoryBranchesUpdateParams)
 	var w *models.Workspace
 	var r *models.Repository
-	params := ParamsFor[RepositoryBranchesUpdateParams](jparams)
-	workspace := params.Workspace
-	uri := params.URI
-	branch := params.Branch
-	st := utils.StreamCreate()
 
-	uc := models.ResolveUserContext("Workspaces")
-	if w, err = models.ResolveWorkspace(uc, workspace,
+	uc := models.ResolveUserContext("Workspaces", "Workspace")
+	if w, err = models.ResolveWorkspace(uc, p.Workspace,
 		"Repositories",
 	); err != nil {
 		return
 	}
-	if r, err = models.ResolveRepository(w, uri,
+	if r, err = models.ResolveRepository(w, p.URI,
 		"GitRepo",
 	); err != nil {
 		return
 	}
-	if err = r.Checkout(branch); err != nil {
+	if err = r.Checkout(p.Branch); err != nil {
 		return
 	}
 
-	if branch, err = r.GitRepo.Branch(); err != nil {
-		return
+	result = &Result{
+		Payload: &RepositoryBranchesUpdateResult{
+			Workspace: r.Workspace.Name,
+			URI:       p.URI,
+			Branch:    p.Branch,
+		},
 	}
-	result := &RepositoryBranchesUpdateResult{
-		Workspace: r.Workspace.Name,
-		URI:       params.URI,
-		Branch:    branch,
-	}
-
-	jbody = jbodyFor(result, nil, st)
 	return
 }

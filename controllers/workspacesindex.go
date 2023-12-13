@@ -5,23 +5,23 @@ import (
 )
 
 type WorkspacesIndexItemResult struct {
-	Name      string
+	Workspace string
 	About     string
 	IsContext bool
 }
 
-func WorkspacesIndex(jparams []byte) (jbody []byte, err error) {
+func WorkspacesIndex(params *Params) (result *Result, err error) {
 	uc := models.ResolveUserContext("Workspaces")
 
-	result := []*WorkspacesIndexItemResult{}
+	r := []*WorkspacesIndexItemResult{}
 	for _, w := range uc.Workspaces {
-		result = append(result, &WorkspacesIndexItemResult{
-			Name:      w.Name,
+		r = append(r, &WorkspacesIndexItemResult{
+			Workspace: w.Name,
 			About:     w.About,
 			IsContext: uc.WorkspaceID == w.ID,
 		})
 	}
 
-	jbody = jbodyFor(result)
+	result = &Result{Payload: r}
 	return
 }

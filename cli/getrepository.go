@@ -2,9 +2,7 @@ package cli
 
 import (
 	"sf/cli/cliapp"
-	"sf/cli/prompting"
 	"sf/controllers"
-	"sf/models"
 )
 
 func getRepository() (command any) {
@@ -22,8 +20,8 @@ func getRepository() (command any) {
 		Flags: ss(
 			"string", "workspace", "Name of the workspace",
 		),
-		Parametizer: getRepositoryParams,
-		Controller:  controllers.RepositoriesRead,
+		Handler:    getRepositoryHandler,
+		Controller: controllers.RepositoriesRead,
 		Viewer: cliapp.View(
 			"repositories/read",
 			"repositories/branches",
@@ -34,25 +32,12 @@ func getRepository() (command any) {
 	return
 }
 
-func getRepositoryParams(context *cliapp.Context) (jparams []byte, err error) {
-	var w *models.Workspace
-	uri := context.Argument(0)
-	workspace := context.StringFlag("workspace")
-
-	uc := models.ResolveUserContext("Workspace", "Workspaces")
-	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
-		return
+func getRepositoryHandler(context *cliapp.Context) (params *controllers.Params, err error) {
+	params = &controllers.Params{
+		Payload: &controllers.RepositoriesReadParams{
+			Workspace: context.StringFlag("workspace"),
+			URI:       context.Argument(0),
+		},
 	}
-
-	if uri == "" {
-		if uri, err = prompting.RepositoryURI(w); err != nil {
-			return
-		}
-	}
-
-	jparams = jsonParams(map[string]any{
-		"Workspace": w.Name,
-		"URI":       uri,
-	})
 	return
 }

@@ -3,7 +3,6 @@ package cli
 import (
 	"sf/cli/cliapp"
 	"sf/controllers"
-	"sf/models"
 )
 
 func inspect() (command any) {
@@ -16,8 +15,8 @@ func inspect() (command any) {
 			"Provide an optional workspace name as an argument",
 			"  Uses workspace context when not provided",
 		),
-		Parametizer: inspectParams,
-		Controller:  controllers.WorkspaceInspectsRead,
+		Handler:    inspectHandler,
+		Controller: controllers.WorkspaceInspectsRead,
 		Viewer: cliapp.View(
 			"workspaceinspects/read",
 			"workspaceinspects/frames",
@@ -33,8 +32,9 @@ func inspect() (command any) {
 			"workspaceinspects/directories",
 			"workspaceinspects/directory",
 			"configurations/configuration",
-			"configurations/setting",
+			"configurations/datum",
 			"gitrepos/gitrepo",
+			"gitrepos/branches",
 			"gitrepos/framers",
 			"gitrepos/framer",
 			"gitrepos/shapers",
@@ -44,21 +44,11 @@ func inspect() (command any) {
 	return
 }
 
-func inspectParams(context *cliapp.Context) (jparams []byte, err error) {
-	var w *models.Workspace
-	workspace := context.Argument(0)
-
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace",
-	)
-	if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
-		return
+func inspectHandler(context *cliapp.Context) (params *controllers.Params, err error) {
+	params = &controllers.Params{
+		Payload: &controllers.WorkspaceInspectsReadParams{
+			Workspace: context.Argument(0),
+		},
 	}
-
-	params := map[string]any{
-		"Workspace": w.Name,
-	}
-
-	jparams = jsonParams(params)
 	return
 }

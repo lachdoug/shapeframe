@@ -14,14 +14,14 @@ type ShapersIndexItemResult struct {
 	About     string
 }
 
-func ShapersIndex(jparams []byte) (jbody []byte, err error) {
+func ShapersIndex(params *Params) (result *Result, err error) {
 	var srs []*models.Shaper
-	params := ParamsFor[ShapersIndexParams](jparams)
+	p := params.Payload.(*ShapersIndexParams)
 
 	uc := models.ResolveUserContext(
 		"Workspaces", "Workspace",
 	)
-	if params.Workspace == "" {
+	if p.Workspace == "" {
 		for _, w := range uc.Workspaces {
 			if err = w.Load("Shapers"); err != nil {
 				return
@@ -30,7 +30,7 @@ func ShapersIndex(jparams []byte) (jbody []byte, err error) {
 		}
 	} else {
 		var w *models.Workspace
-		if w, err = models.ResolveWorkspace(uc, params.Workspace,
+		if w, err = models.ResolveWorkspace(uc, p.Workspace,
 			"Shapers",
 		); err != nil {
 			return
@@ -38,19 +38,19 @@ func ShapersIndex(jparams []byte) (jbody []byte, err error) {
 		srs = w.Shapers
 	}
 
-	result := []*ShapersIndexItemResult{}
+	r := []*ShapersIndexItemResult{}
 	var uri string
 	for _, sr := range srs {
 		if uri, err = sr.URI(); err != nil {
 			return
 		}
-		result = append(result, &ShapersIndexItemResult{
+		r = append(r, &ShapersIndexItemResult{
 			Workspace: sr.Workspace.Name,
 			URI:       uri,
 			About:     sr.About,
 		})
 	}
 
-	jbody = jbodyFor(result)
+	result = &Result{Payload: r}
 	return
 }

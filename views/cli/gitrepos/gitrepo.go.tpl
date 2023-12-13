@@ -1,16 +1,10 @@
 {{ define "gitrepos/gitrepo" -}}
-Path: {{ .Path }}
 URI: {{ .URI }}
 URL: {{ .URL }}
 Branch: {{ .Branch }}
-Shapers: {{ if eq (len (.Shapers)) 0 }}<none>
-{{ else }}
-{{ include "gitrepos/framers" (.Shapers) }}
-{{ end -}}
-Framers: {{ if eq (len (.Framers)) 0 }}<none>
-{{ else }}
-{{ include "gitrepos/framers" (.Framers) }}
-{{ end -}}
+Branches: {{ include "gitrepos/branches" .Branches 2 0 }}
+Shapers: {{ include "gitrepos/shapers" .Shapers 2 0 }}
+Framers: {{ include "gitrepos/framers" .Framers 2 0 }}
 {{ end -}}
 
 

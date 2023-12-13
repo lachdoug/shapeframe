@@ -52,7 +52,7 @@ func (gl *GitRepoLoader) loadShapers() (err error) {
 	if gl.Shapers {
 		gl.setShapers()
 		for _, sr := range gl.GitRepo.Shapers {
-			if err = sr.Load(); err != nil {
+			if err = sr.load(); err != nil {
 				return
 			}
 		}

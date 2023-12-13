@@ -1,5 +1,5 @@
 {{ define "contexts/read" -}}
-{{ with .Result -}}
-{{ include "contexts/context" . }}
+{{ with .Payload -}}
+Context: {{ include "contexts/context" . 2 0 }}
 {{ end -}}
 {{ end -}}

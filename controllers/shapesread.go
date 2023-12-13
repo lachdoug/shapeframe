@@ -10,31 +10,33 @@ type ShapesReadParams struct {
 	Shape     string
 }
 
-func ShapesRead(jparams []byte) (jbody []byte, err error) {
+func ShapesRead(params *Params) (result *Result, err error) {
 	var w *models.Workspace
 	var f *models.Frame
 	var s *models.Shape
-	params := ParamsFor[ShapesReadParams](jparams)
+	p := params.Payload.(*ShapesReadParams)
 
-	uc := models.ResolveUserContext("Workspaces")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+	uc := models.ResolveUserContext(
+		"Workspaces", "Workspace", "Frame", "Shape",
+	)
+	if w, err = models.ResolveWorkspace(uc, p.Workspace,
 		"Frames",
 	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, params.Frame,
+	if f, err = models.ResolveFrame(uc, w, p.Frame,
 		"Shapes",
 	); err != nil {
 		return
 	}
-	if s, err = models.ResolveShape(uc, f, params.Shape,
+	if s, err = models.ResolveShape(uc, f, p.Shape,
 		"Configuration",
 	); err != nil {
 		return
 	}
 
-	result := s.Read()
-
-	jbody = jbodyFor(result)
+	result = &Result{
+		Payload: s.Read(),
+	}
 	return
 }

@@ -1,9 +1,12 @@
 {{ define "shapes/read" -}}
-{{ with .Result -}}
+{{ with .Payload -}}
 Name: {{ .Name }}
 About: {{ .About }}
 Workspace: {{ .Workspace }}
 Frame: {{ .Frame }}
-{{ include "configurations/configuration" (.Configuration) }}
+Configuration:
+  Shape: {{ include "configurations/configuration" .ShapeSettings 4 0 }}
+  FrameShape: {{ include "configurations/configuration" .FrameShapeSettings 4 0 }}
 {{ end -}}
 {{ end -}}
+

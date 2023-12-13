@@ -1,5 +1,5 @@
 {{ define "workspaces/create" -}}
-{{ with .Result -}}
+{{ with .Payload -}}
 Successfully added workspace {{ .Workspace }}
 {{ end -}}
 {{ end -}}

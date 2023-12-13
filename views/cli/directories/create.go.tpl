@@ -1,7 +1,5 @@
 {{ define "directories/create" -}}
-{{ with .Result -}}
+{{ with .Payload -}}
 Successfully added directory {{ .Path }} to workspace {{ .Workspace }}
-Directory:
-{{ include "gitrepos/gitrepo" (.GitRepo) 2 }}
 {{ end -}}
 {{ end -}}

@@ -1,5 +1,5 @@
 {{ define "frames/create" -}}
-{{ with .Result -}}
+{{ with .Payload -}}
 Successfully added frame {{ .Frame }} to workspace {{ .Workspace }}
 {{ end -}}
 {{ end -}}

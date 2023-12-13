@@ -3,7 +3,6 @@ package cli
 import (
 	"sf/cli/cliapp"
 	"sf/controllers"
-	"sf/models"
 )
 
 func listShapers() (command any) {
@@ -23,49 +22,47 @@ func listShapers() (command any) {
 			"string", "workspace", "Workspace name",
 			"bool", "all", "All workspaces",
 		),
-		Parametizer: listShapersParams,
-		Controller:  controllers.ShapersIndex,
-		Viewer:      listShapersViewer,
+		Handler:    listShapersHandler,
+		Controller: controllers.ShapersIndex,
+		Viewer:     listShapersViewer,
 	}
 	return
 }
 
-func listShapersParams(context *cliapp.Context) (jparams []byte, err error) {
-	var w *models.Workspace
-	all := context.BoolFlag("all")
-	workspace := context.StringFlag("workspace")
-	params := map[string]any{}
-
-	if !all {
-		uc := models.ResolveUserContext(
-			"Workspaces", "Workspace",
-		)
-		if w, err = models.ResolveWorkspace(uc, workspace); err != nil {
-			return
-		}
-		params["Workspace"] = w.Name
+func listShapersHandler(context *cliapp.Context) (params *controllers.Params, err error) {
+	params = &controllers.Params{
+		Payload: &controllers.ShapersIndexParams{
+			Workspace: context.StringFlag("workspace"),
+		},
 	}
-
-	jparams = jsonParams(params)
 	return
 }
 
-func listShapersViewer(body map[string]any) (output string, err error) {
+func listShapersViewer(result *controllers.Result) (output string, err error) {
+	rs := result.Payload.([]*controllers.ShapersIndexItemResult)
+	items := []map[string]any{}
+	for _, r := range rs {
+		items = append(items, map[string]any{
+			"Workspace": r.Workspace,
+			"URI":       r.About,
+			"About":     r.About,
+		})
+	}
+
 	table := &Table{
-		Items:  resultItems(body),
+		Items:  items,
 		Titles: ss("WORKSPACE", "SHAPER", "ABOUT"),
 		Keys:   ss("Workspace", "URI", "About"),
-		Values: tvs(
-			tableCellStringValueFn,
-			tableCellStringValueFn,
-			tableCellStringValueFn,
-		),
 		Accents: tas(
 			tableCellNoAccentFn,
 			tableCellNoAccentFn,
 			tableCellNoAccentFn,
 		),
 	}
-	output, err = cliapp.View("shapers/index")(table.generate())
+
+	result = &controllers.Result{
+		Payload: table.generate(),
+	}
+	output, err = cliapp.View("shapers/index")(result)
 	return
 }

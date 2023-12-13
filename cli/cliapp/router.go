@@ -1,8 +1,6 @@
 package cliapp
 
-import (
-	"sf/app"
-)
+import "sf/app/errors"
 
 type Router struct {
 	Name        string
@@ -14,7 +12,7 @@ type Router struct {
 }
 
 func (r *Router) Run(args []string) {
-	if err := uApp(r).Run(args); err != nil {
-		app.ErrorHandler(err)
+	if err := NewUApp(r).Run(args); err != nil {
+		errors.ErrorHandler(err)
 	}
 }

@@ -1,7 +1,6 @@
 {{ define "configurations/configuration" -}}
-Configuration:{{ if eq (len .) 0 }} <none>
-{{ else }}
-{{ range . -}}{{ include "configurations/setting" . 2 }}
+{{ if or (eq . nil) (eq (len .) 0) }}<none>{{ else }}
+{{ range . -}}{{ include "configurations/datum" . 2 }}
 {{ end -}}
 {{ end -}}
 {{ end -}}

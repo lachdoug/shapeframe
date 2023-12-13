@@ -20,14 +20,14 @@ func nuke() (command any) {
 		Flags: ss(
 			"bool", "confirm", "Confirm nuke",
 		),
-		Parametizer: nukeParams,
-		Controller:  controllers.NukesCreate,
-		Viewer:      cliapp.View("nukes/create"),
+		Handler:    nukeHandler,
+		Controller: controllers.NukesCreate,
+		Viewer:     cliapp.View("nukes/create"),
 	}
 	return
 }
 
-func nukeParams(context *cliapp.Context) (jparams []byte, err error) {
+func nukeHandler(context *cliapp.Context) (params *controllers.Params, err error) {
 	var confirmed bool
 	if !context.BoolFlag("confirm") {
 		confirmed, err = prompting.Confirmation(

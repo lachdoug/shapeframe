@@ -1,7 +1,7 @@
 package models
 
 import (
-	"sf/app"
+	"sf/app/errors"
 	"sf/database/queries"
 	"sf/utils"
 
@@ -39,6 +39,7 @@ func (sl *ShapeLoader) dependencies() {
 	if slices.Contains(primaries, "Configuration") {
 		sl.Loads = append(sl.Loads,
 			"Frame.Workspace.Shapers",
+			"Frame.Framer",
 			"Shaper",
 			"Configuration.Form",
 		)
@@ -102,11 +103,19 @@ func (sl *ShapeLoader) loadShaper() (err error) {
 
 func (sl *ShapeLoader) loadConfiguration() (err error) {
 	if sl.Configuration {
-		if err = sl.setConfiguration(); err != nil {
+		if err = sl.setShapeConfiguration(); err != nil {
 			return
 		}
 		if len(sl.ConfigurationLoads) > 0 {
-			if err = sl.Shape.Configuration.Load(sl.ConfigurationLoads...); err != nil {
+			if err = sl.Shape.ShapeConfiguration.load(sl.ConfigurationLoads...); err != nil {
+				return
+			}
+		}
+		if err = sl.setFrameShapeConfiguration(); err != nil {
+			return
+		}
+		if len(sl.ConfigurationLoads) > 0 {
+			if err = sl.Shape.FrameShapeConfiguration.load(sl.ConfigurationLoads...); err != nil {
 				return
 			}
 		}
@@ -114,24 +123,24 @@ func (sl *ShapeLoader) loadConfiguration() (err error) {
 	return
 }
 
-func (sl *ShapeLoader) setConfiguration() (err error) {
-	c := &Configuration{
-		OwnerID:   sl.Shape.ID,
-		OwnerType: "Shape",
-	}
+func (sl *ShapeLoader) setShapeConfiguration() (err error) {
+	c := NewConfiguration(sl.Shape.ID, "shape", "shape", sl.Shape.Shaper.Shape)
 	queries.Lookup(c)
-	if c.ID == 0 {
-		c = NewConfiguration(sl.Shape)
-	}
-	c.Owner = sl.Shape
-	sl.Shape.Configuration = c
+	sl.Shape.ShapeConfiguration = c
+	return
+}
+
+func (sl *ShapeLoader) setFrameShapeConfiguration() (err error) {
+	c := NewConfiguration(sl.Shape.ID, "shape", "frame", sl.Shape.Frame.Framer.Shape)
+	queries.Lookup(c)
+	sl.Shape.FrameShapeConfiguration = c
 	return
 }
 
 func (sl *ShapeLoader) setShaper() (err error) {
 	shaper := sl.Shape.Frame.Workspace.FindShaper(sl.Shape.ShaperName)
 	if shaper == nil {
-		err = app.Error(
+		err = errors.Errorf(
 			"shaper %s does not exist in workspace %s",
 			sl.Shape.ShaperName,
 			sl.Shape.Frame.Workspace.Name,

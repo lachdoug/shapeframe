@@ -1,7 +1,8 @@
 package models
 
 import (
-	"sf/app"
+	"sf/app/errors"
+	"sf/app/validations"
 	"sf/database/queries"
 	"sf/utils"
 	"time"
@@ -37,11 +38,11 @@ func NewDirectory(w *Workspace, path string) (d *Directory) {
 	return
 }
 
-func CreateDirectory(w *Workspace, path string) (d *Directory, vn *app.Validation, err error) {
+func CreateDirectory(w *Workspace, path string) (d *Directory, vn *validations.Validation, err error) {
 	d = NewDirectory(w, path)
 	if vn = d.Validation(); vn.IsValid() {
 		if d.IsExists() {
-			err = app.Error("directory %s already exists in workspace %s", path, w.Name)
+			err = errors.Errorf("directory %s already exists in workspace %s", path, w.Name)
 			return
 		}
 		d.Save()
@@ -51,16 +52,16 @@ func CreateDirectory(w *Workspace, path string) (d *Directory, vn *app.Validatio
 
 func ResolveDirectory(w *Workspace, path string, loads ...string) (d *Directory, err error) {
 	if w == nil {
-		err = app.Error("no workspace")
+		err = errors.Error("no workspace")
 		return
 	}
 	if len(w.Directories) == 0 {
-		err = app.Error("no directories exist in workspace %s", w.Name)
+		err = errors.Errorf("no directories exist in workspace %s", w.Name)
 		return
 	}
 	d = w.FindDirectory(path)
 	if d == nil {
-		err = app.Error("directory %s does not exist in workspace %s", path, w.Name)
+		err = errors.Errorf("directory %s does not exist in workspace %s", path, w.Name)
 		return
 	}
 	if len(loads) > 0 {
@@ -101,8 +102,8 @@ func (d *Directory) Load(loads ...string) (err error) {
 	return
 }
 
-func (d *Directory) Validation() (vn *app.Validation) {
-	vn = &app.Validation{}
+func (d *Directory) Validation() (vn *validations.Validation) {
+	vn = validations.NewValidation()
 	if d.Path == "" {
 		vn.Add("Path", "must not be blank")
 	}
@@ -112,10 +113,12 @@ func (d *Directory) Validation() (vn *app.Validation) {
 	return
 }
 
+// Record
+
 func (d *Directory) Save() {
 	queries.Save(d)
 }
 
-func (d *Directory) Destroy() {
+func (d *Directory) Delete() {
 	queries.Delete(d)
 }

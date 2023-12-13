@@ -1,56 +1,54 @@
 package controllers
 
 import (
-	"sf/app"
+	"sf/app/validations"
 	"sf/models"
 )
 
 type FrameConfigurationsUpdateParams struct {
 	Workspace string
 	Frame     string
-	Update    map[string]any
+	Updates   map[string]string
 }
 
 type FrameConfigurationsUpdateResult struct {
-	Workspace     string
-	Frame         string
-	Configuration []map[string]any
+	Workspace string
+	Frame     string
+	From      []map[string]string
+	To        []map[string]string
 }
 
-func FrameConfigurationsUpdate(jparams []byte) (jbody []byte, err error) {
+func FrameConfigurationsUpdate(params *Params) (result *Result, err error) {
+	p := params.Payload.(*FrameConfigurationsUpdateParams)
 	var w *models.Workspace
 	var f *models.Frame
-	var vn *app.Validation
-	params := ParamsFor[FrameConfigurationsUpdateParams](jparams)
+	var vn *validations.Validation
 
-	uc := models.ResolveUserContext("Workspaces")
-	if w, err = models.ResolveWorkspace(uc, params.Workspace,
+	uc := models.ResolveUserContext("Workspaces", "Workspace", "Frame")
+	if w, err = models.ResolveWorkspace(uc, p.Workspace,
 		"Frames",
 	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, params.Frame,
+	if f, err = models.ResolveFrame(uc, w, p.Frame,
 		"Configuration",
 	); err != nil {
 		return
 	}
 
-	result := &FramesUpdateResult{
+	r := &FrameConfigurationsUpdateResult{
 		Workspace: w.Name,
 		Frame:     f.Name,
-		From: &FramesUpdateResultDetails{
-			Configuration: f.Configuration.Details(),
-		},
+		From:      f.Configuration.Info(),
 	}
 
-	if vn, err = f.Configuration.Update(params.Update); err != nil {
-		return
-	}
+	vn = f.Configuration.Update(p.Updates)
 
-	result.To = &FramesUpdateResultDetails{
-		Configuration: f.Configuration.Details(),
-	}
+	r.To = f.Configuration.Info()
 
-	jbody = jbodyFor(result, vn)
+	result = &Result{
+		Payload:    r,
+		Validation: vn,
+	}
 	return
 }

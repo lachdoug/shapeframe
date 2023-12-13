@@ -1,3 +1,3 @@
 {{ define "workspaceinspects/repository" -}}
-{{ include "gitrepos/gitrepo" (.GitRepo) }}
+{{ include "gitrepos/gitrepo" .GitRepo }}
 {{ end -}}

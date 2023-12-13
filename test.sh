@@ -8,17 +8,17 @@ redColor='\033[0;31m'
 greenColor='\033[0;32m'
 yellowColor='\033[0;33m'
 blueColor='\033[0;34m'
-noColor='\033[0m'
+resetText='\033[0m'
 
 errorCount=0
 successCount=0
 args=( "$@" )
 
 sf() {
-    echo -e "${blueColor}sf $@${noColor}"
+    echo -e "${blueColor}sf $@${resetText}"
     if [[ $args =~ "-d" ]]
     then
-        command sf -debug "$@"
+        command sf --debug "$@"
     else
         command sf "$@"
     fi    
@@ -32,7 +32,7 @@ sf() {
 }
 
 handleFailure() {
-    echo -e "${redColor}Fail${noColor}\n"
+    echo -e "${redColor}Fail${resetText}\n"
     let errorCount=errorCount+1
     if ! [[ $args =~ "-c" ]]
     then
@@ -41,25 +41,43 @@ handleFailure() {
 }
 
 handleSuccess() {
-    echo -e "${greenColor}Pass${noColor}\n"
+    echo -e "${greenColor}Pass${resetText}\n"
     let successCount=successCount+1
 }
 
 report() {
-    echo -e "${greenColor}Pass: ${successCount} ${redColor}Fail: ${errorCount}${noColor}"
+    echo -e "${greenColor}Pass: ${successCount} ${redColor}Fail: ${errorCount}${resetText}"
     if [[ "$errorCount" -eq 0 ]]
     then
-        echo -e "${greenColor}Tests passed${noColor}"
+        echo -e "${greenColor}Tests passed${resetText}"
         exit 0
     else
-        echo -e "${redColor}Tests failed${noColor}"
+        echo -e "${redColor}Tests failed${resetText}"
         exit 1
     fi
 }
 
 t() {
-    echo -e "\n${yellowColor}$@${noColor}\n"   
+    echo -e "\n${yellowColor}$@${resetText}\n"   
 }
+
+# Config settings
+
+frame_config_yaml="
+color: red
+bar: "1"
+foo: cool
+wow: xyz
+"
+shape_config_yaml="
+color: red
+bar: foo
+foo: cool
+"
+frame_shape_config_yaml="
+restart: on-failure
+restart-on-failure: 3
+"
 
 t Nuking
 sf nuke -confirm
@@ -89,6 +107,7 @@ sf a r github.com/lachdoug/shapeframe-apps
 sf rm r github.com/lachdoug/shapeframe-apps
 sf a r -https github.com/lachdoug/shapeframe-apps
 sf pull github.com/lachdoug/shapeframe-apps
+sf checkout github.com/lachdoug/shapeframe-apps main
 sf rm w
 
 t Adding and removing frames
@@ -127,10 +146,10 @@ sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
 sf a f -workspace W1 docker-local
 sf a s -workspace W1 -frame docker-local apache
 sf ls w
-sf ls f -all
-sf ls s -all
-sf ls sr -all
-sf ls fr -all
+sf ls f
+sf ls s
+sf ls sr
+sf ls fr
 sf ls f -workspace W1 
 sf ls s -workspace W1 
 sf ls sr -workspace W1 
@@ -188,13 +207,19 @@ sf a w W1
 sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
 sf a f -workspace W1 docker-local
 sf a s -workspace W1 -frame docker-local apache
-sf cg f -workspace W1 -frame docker-local blue foo
-sf cg s -workspace W1 -frame docker-local -shape apache blue foo cool
+sf cg f -workspace W1 -frame docker-local "$frame_config_yaml"
+sf cg s -workspace W1 -frame docker-local -shape apache "$shape_config_yaml"
+sf cg f-s -workspace W1 -frame docker-local -shape apache "$frame_shape_config_yaml"
 sf cx W1
-sf cg f -frame docker-local blue foo
-sf cg s -frame docker-local -shape apache blue foo cool
+sf cg f -frame docker-local "$frame_config_yaml"
+sf cg s -frame docker-local -shape apache "$shape_config_yaml"
+sf cg f-s -frame docker-local -shape apache "$frame_shape_config_yaml"
 sf cx docker-local
-sf cg s -shape apache blue foo cool
+sf cg s -shape apache "$shape_config_yaml"
+sf cg f-s -shape apache "$frame_shape_config_yaml"
+sf cx apache
+sf cg s "$shape_config_yaml"
+sf cg f-s "$frame_shape_config_yaml"
 sf rm w
 
 t Labelling
@@ -224,6 +249,9 @@ sf a w -about "Workspace One" W1
 sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
 sf a f -workspace W1 docker-local
 sf a s -workspace W1 -frame docker-local apache
+sf cg f -workspace W1 -frame docker-local "$frame_config_yaml"
+sf cg s -workspace W1 -frame docker-local -shape apache "$shape_config_yaml"
+sf cg f-s -workspace W1 -frame docker-local -shape apache "$frame_shape_config_yaml"
 sf o -workspace W1 -frame docker-local
 sf cx W1
 sf o -frame docker-local

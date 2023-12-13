@@ -1,8 +1,10 @@
 package models
 
 import (
+	"fmt"
 	"path/filepath"
-	"sf/app"
+	"sf/app/errors"
+	"sf/app/validations"
 	"sf/utils"
 )
 
@@ -11,8 +13,18 @@ type Shaper struct {
 	Path      string
 	Name      string
 	About     string
-	Config    []map[string]any
+	Shape     []*FormComponent
 	Connect   []*ShaperConnect
+	// ConfigurationFormSchema *FormSchema
+	Build   *ShaperBuild
+	Start   []string
+	Ports   [][]string
+	Volumes [][]string
+}
+
+type ShaperBuild struct {
+	On string
+	Do [][]string
 }
 
 type ShaperInspector struct {
@@ -48,33 +60,49 @@ func (sr *Shaper) Inspect() (sri *ShaperInspector) {
 	return
 }
 
+// Location
+
+func (sr *Shaper) directory(subDirs ...string) (dirPath string) {
+	elem := append([]string{sr.Path, "shapers", sr.Name}, subDirs...)
+	dirPath = filepath.Join(elem...)
+	return
+}
+
 // Data
 
 func (sr *Shaper) URI() (uri string, err error) {
 	var gruri string
 	if gruri, err = utils.GitURI(sr.Path); err != nil {
-		err = app.ErrorWrapf(err, "shaper URI")
+		err = errors.ErrorWrap(err, "shaper URI")
 		return
 	}
 	uri = gruri + "#" + sr.Name
 	return
 }
 
-func (sr *Shaper) directory() (dirPath string) {
-	dirPath = filepath.Join(sr.Path, "shapers", sr.Name)
-	return
-}
-
-func (sr *Shaper) Load() (err error) {
+func (sr *Shaper) load(loads ...string) (err error) {
 	if err = utils.YamlReadFile(sr.directory(), "shaper", sr); err != nil {
-		err = app.ErrorWrapf(err, "load shaper %s in %s", sr.Name, sr.Path)
+		err = errors.ErrorWrapf(err, "load %s", filepath.Join(sr.Path, sr.Name, "shaper.yaml"))
+		return
 	}
+	err = sr.validation()
 	return
 }
 
-// Configuration
-
-func (sr *Shaper) configurationFormSchema() (schema *FormSchema) {
-	schema = NewFormSchema("shaper", sr.Name, sr.Config)
+func (sr *Shaper) validation() (err error) {
+	vn := validations.NewValidation()
+	if sr.About == "" {
+		vn.Add("root", "must have an about")
+	}
+	if len(sr.Start) == 0 {
+		vn.Add("root", "must have a start instruction")
+	}
+	for i, fmc := range sr.Shape {
+		fmc.validation(fmt.Sprintf("shape %d", i), vn)
+	}
+	if vn.IsInvalid() {
+		err = errors.ErrorWrapf(errors.ValidationError(vn.Maps()), "shaper %s", sr.Name)
+		return
+	}
 	return
 }

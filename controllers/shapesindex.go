@@ -5,26 +5,30 @@ import (
 )
 
 type ShapesIndexParams struct {
-	Workspace string // Limit list to workspace
+	Workspace string
+	Frame     string
 }
 
 type ShapesIndexItemResult struct {
 	Workspace string
 	Frame     string
+	Shape     string
 	Shaper    string
-	Name      string
 	About     string
 	IsContext bool
 }
 
-func ShapesIndex(jparams []byte) (jbody []byte, err error) {
+func ShapesIndex(params *Params) (result *Result, err error) {
+	var w *models.Workspace
+	var f *models.Frame
 	var ss []*models.Shape
-	params := ParamsFor[ShapesIndexParams](jparams)
+	if params.Payload == nil {
+		params.Payload = &ShapesIndexParams{}
+	}
+	p := params.Payload.(*ShapesIndexParams)
 
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace",
-	)
-	if params.Workspace == "" {
+	uc := models.ResolveUserContext("Workspaces")
+	if p.Workspace == "" {
 		for _, w := range uc.Workspaces {
 			w.Load("Frames.Shapes.Frame.Workspace")
 			for _, f := range w.Frames {
@@ -32,29 +36,43 @@ func ShapesIndex(jparams []byte) (jbody []byte, err error) {
 			}
 		}
 	} else {
-		var w *models.Workspace
-		if w, err = models.ResolveWorkspace(uc, params.Workspace,
-			"Frames.Shapes.Frame.Workspace",
-		); err != nil {
-			return
+		if p.Frame == "" {
+			if w, err = models.ResolveWorkspace(uc, p.Workspace,
+				"Frames.Shapes.Frame.Workspace",
+			); err != nil {
+				return
+			}
+			for _, f := range w.Frames {
+				ss = append(ss, f.Shapes...)
+			}
+		} else {
+			if w, err = models.ResolveWorkspace(uc, p.Workspace,
+				"Frames",
+			); err != nil {
+				return
+			}
+			if f, err = models.ResolveFrame(uc, w, p.Frame,
+				"Shapes.Frame.Workspace",
+			); err != nil {
+				return
+			}
+			ss = f.Shapes
 		}
-		for _, f := range w.Frames {
-			ss = append(ss, f.Shapes...)
-		}
+
 	}
 
-	result := []*ShapesIndexItemResult{}
+	r := []*ShapesIndexItemResult{}
 	for _, s := range ss {
-		result = append(result, &ShapesIndexItemResult{
+		r = append(r, &ShapesIndexItemResult{
 			Workspace: s.Frame.Workspace.Name,
 			Frame:     s.Frame.Name,
+			Shape:     s.Name,
 			Shaper:    s.ShaperName,
-			Name:      s.Name,
 			About:     s.About,
 			IsContext: uc.ShapeID == s.ID,
 		})
 	}
 
-	jbody = jbodyFor(result)
+	result = &Result{Payload: r}
 	return
 }
