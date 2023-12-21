@@ -35,7 +35,6 @@ func (gl *GitRepoLoader) settle() {
 	if slices.Contains(gl.Loads, "Framers") {
 		gl.Framers = true
 	}
-	return
 }
 
 func (gl *GitRepoLoader) assign() (err error) {
