@@ -69,6 +69,7 @@ func (fmc *FormComponent) loadField() {
 	fmc.setLabel()
 	fmc.setInvalid()
 	fmc.setDepend()
+	fmc.setOptionLabels()
 }
 
 func (fmc *FormComponent) loadRow() {
@@ -102,6 +103,14 @@ func (fmc *FormComponent) defaultAs() (a string) {
 func (fmc *FormComponent) setLabel() {
 	if fmc.Label == "" {
 		fmc.Label = fmc.Key
+	}
+}
+
+func (fmc *FormComponent) setOptionLabels() {
+	for _, fmcopt := range fmc.Options {
+		if fmcopt.Label == "" {
+			fmcopt.Label = fmcopt.Value
+		}
 	}
 }
 

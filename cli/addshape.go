@@ -11,12 +11,9 @@ func addShape() (command any) {
 		Summary: "Add a shape to a frame",
 		Aliases: ss("s"),
 		Usage: ss(
-			"sf add shape [options] [name]",
+			"sf add shape [options] NAME",
 			"A shaper name must be provided as an argument",
-			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
 			"Provide an optional frame name using the -frame flag",
-			"  Is required if -workspace flag is set",
 			"  Otherwise uses frame context when not provided",
 			"Provide an optional shape name using the -shape flag",
 			"  Uses shaper name when not provided",
@@ -24,7 +21,6 @@ func addShape() (command any) {
 			"  Uses shaper about when not provided",
 		),
 		Flags: ss(
-			"string", "workspace", "Name of the workspace",
 			"string", "frame", "Name of the frame",
 			"string", "shape", "Name for the shape",
 			"string", "about", "About the shape",
@@ -39,11 +35,10 @@ func addShape() (command any) {
 func addShapeHandler(context *cliapp.Context) (params *controllers.Params, err error) {
 	params = &controllers.Params{
 		Payload: &controllers.ShapesCreateParams{
-			Shaper:    context.Argument(0),
-			Workspace: context.StringFlag("workspace"),
-			Frame:     context.StringFlag("frame"),
-			Shape:     context.StringFlag("shape"),
-			About:     context.StringFlag("about"),
+			Shaper: context.Argument(0),
+			Frame:  context.StringFlag("frame"),
+			Shape:  context.StringFlag("shape"),
+			About:  context.StringFlag("about"),
 		},
 	}
 	return

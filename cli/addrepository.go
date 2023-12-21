@@ -12,7 +12,7 @@ func addRepository() (command any) {
 		Summary: "Add a repository to workspace",
 		Aliases: ss("r"),
 		Usage: ss(
-			"sf add repository [options] [URI]",
+			"sf add repository [options] URI",
 			"A repository URI must be provided as an argument",
 			"Clone with https by setting the -https flag",
 			"  Otherwise performs git clone using SSH",
@@ -20,14 +20,11 @@ func addRepository() (command any) {
 			"  Otherwise performs git clone without a token when using HTTPS",
 			"Include a password (or personal access token) for HTTPS clone by setting the -password flag",
 			"  Otherwise performs git clone without a password when using HTTPS",
-			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
 		),
 		Flags: ss(
 			"bool", "https H", "Use HTTPS for git clone",
 			"string", "username u", "Username for git clone",
 			"string", "password p", "Password for git clone",
-			"string", "workspace", "Workspace name",
 		),
 		Handler:    addRepositoryHandler,
 		Controller: controllers.RepositoriesCreate,
@@ -45,11 +42,10 @@ func addRepositoryHandler(context *cliapp.Context) (params *controllers.Params, 
 
 	params = &controllers.Params{
 		Payload: &controllers.RepositoriesCreateParams{
-			URI:       context.Argument(0),
-			Protocol:  protocol,
-			Username:  context.StringFlag("username"),
-			Password:  context.StringFlag("password"),
-			Workspace: context.StringFlag("workspace"),
+			URI:      context.Argument(0),
+			Protocol: protocol,
+			Username: context.StringFlag("username"),
+			Password: context.StringFlag("password"),
 		},
 	}
 	return

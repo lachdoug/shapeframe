@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"sf/tui/tuisupport"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
@@ -73,6 +75,6 @@ func (b *Back) Blur() {
 }
 
 func (b *Back) enter() (c tea.Cmd) {
-	c = Open("..")
+	c = tuisupport.Open("..")
 	return
 }

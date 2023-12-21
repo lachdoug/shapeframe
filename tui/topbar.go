@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"sf/controllers"
+	"sf/models"
 	"sf/tui/tuisupport"
 	"sf/utils"
 
@@ -9,12 +11,11 @@ import (
 )
 
 type TopBar struct {
-	App        *App
-	Title      *Title
-	Back       *Back
-	Width      int
-	IsFocus    bool
-	FocusIndex int
+	App    *App
+	Title  *Title
+	Back   *Back
+	Reader *models.WorkspaceReader
+	Width  int
 }
 
 func newTopBar(a *App) (tb *TopBar) {
@@ -23,8 +24,8 @@ func newTopBar(a *App) (tb *TopBar) {
 }
 
 func (tb *TopBar) Init() (c tea.Cmd) {
+	tb.setReader()
 	tb.setComponents()
-	// tb.focus()
 	return
 }
 
@@ -40,18 +41,28 @@ func (tb *TopBar) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 }
 
 func (tb *TopBar) View() (v string) {
-	style := lipgloss.NewStyle().Width(tb.Width)
+	style := lipgloss.NewStyle().Width(tb.Width).Height(2)
 	leftpadStyle := lipgloss.NewStyle().PaddingLeft(1)
-	path := utils.FixedLengthString(tb.App.Path, tb.Width-14)
-	v = style.Render(lipgloss.JoinHorizontal(lipgloss.Top,
-		tb.Title.View(),
-		leftpadStyle.Render(tb.Back.View()),
-		leftpadStyle.Render(path),
-	))
+	nameStyle := leftpadStyle.Copy().Bold(true)
+	about := utils.FixedLengthString(tb.Reader.About, tb.Width-len(tb.Reader.Name)-12)
+	path := utils.FixedLengthString(tb.App.Path, tb.Width-3)
+	v = style.Render(
+		lipgloss.JoinVertical(lipgloss.Left,
+			lipgloss.JoinHorizontal(lipgloss.Top,
+				tb.Title.View(),
+				nameStyle.Render(tb.Reader.Name),
+				leftpadStyle.Render(about),
+			),
+			lipgloss.JoinHorizontal(lipgloss.Top,
+				tb.Back.View(),
+				leftpadStyle.Render(path),
+			),
+		),
+	)
 	return
 }
 
-func (tb *TopBar) setSize(w int, h int) {
+func (tb *TopBar) setSize(w int) {
 	tb.Width = w
 }
 
@@ -68,49 +79,15 @@ func (tb *TopBar) focusChain() (fc []tuisupport.Focuser) {
 	return
 }
 
-// func (tb *TopBar) focus(on ...string) (c tea.Cmd) {
-// 	if slices.Contains(on, "first") {
-// 		tb.FocusIndex = 0
-// 	} else if slices.Contains(on, "last") {
-// 		tb.FocusIndex = 1
-// 	}
-// 	tb.IsFocus = true
-// 	if tb.FocusIndex == 0 {
-// 		c = tb.Title.focus(on...)
-// 	} else if tb.FocusIndex == 1 {
-// 		c = tb.Back.focus(on...)
-// 	}
-// 	return
-// }
-
-// func (tb *TopBar) blur() {
-// 	if tb.FocusIndex == 0 {
-// 		tb.Title.blur()
-// 	} else if tb.FocusIndex == 1 {
-// 		tb.Back.blur()
-// 	}
-// }
-
-// func (tb *TopBar) next() (c tea.Cmd) {
-// 	// tb.blur()
-// 	tb.FocusIndex++
-// 	if tb.FocusIndex == 2 {
-// 		tb.FocusIndex = 1
-// 		c = tb.App.next()
-// 	} else {
-// 		c = tb.focus("next")
-// 	}
-// 	return
-// }
-
-// func (tb *TopBar) previous() (c tea.Cmd) {
-// 	// tb.blur()
-// 	tb.FocusIndex--
-// 	if tb.FocusIndex == -1 {
-// 		tb.FocusIndex = 0
-// 		c = tb.App.previous()
-// 	} else {
-// 		c = tb.focus("previous")
-// 	}
-// 	return
-// }
+func (tb *TopBar) setReader() (c tea.Cmd) {
+	result := &controllers.Result{}
+	result, c = tb.App.call(
+		controllers.WorkspacesRead,
+		nil,
+		func() tea.Msg { return tuisupport.Open(".") },
+	)
+	if result != nil {
+		tb.Reader = result.Payload.(*models.WorkspaceReader)
+	}
+	return
+}

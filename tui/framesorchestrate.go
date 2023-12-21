@@ -11,18 +11,17 @@ import (
 
 type FramesOrchestrate struct {
 	Body        *Body
-	WID         string
 	ID          string
 	Cancel      *tuisupport.Button
 	Confirm     *tuisupport.Button
 	IsStreaming bool
-	Streamer    *Streamer
+	Streamer    *tuisupport.Streamer
 	Width       int
 	Height      int
 }
 
-func newFramesOrchestrate(b *Body, wid string, id string) (fo *FramesOrchestrate) {
-	fo = &FramesOrchestrate{Body: b, WID: wid, ID: id}
+func newFramesOrchestrate(b *Body, id string) (fo *FramesOrchestrate) {
+	fo = &FramesOrchestrate{Body: b, ID: id}
 	return
 }
 
@@ -54,8 +53,7 @@ func (fo *FramesOrchestrate) View() (v string) {
 	}
 	style := lipgloss.NewStyle().Padding(1)
 	idStyle := lipgloss.NewStyle().Bold(true)
-	id := fmt.Sprintf("%s.%s", fo.WID, fo.ID)
-	msg := style.Render(fmt.Sprintf("Orchestrate frame %s?", idStyle.Render(id)))
+	msg := style.Render(fmt.Sprintf("Orchestrate frame %s?", idStyle.Render(fo.ID)))
 	v = lipgloss.JoinVertical(lipgloss.Left,
 		msg,
 		lipgloss.JoinHorizontal(lipgloss.Top,
@@ -73,7 +71,7 @@ func (fo *FramesOrchestrate) setSize(w int, h int) {
 }
 
 func (fo *FramesOrchestrate) setStreamerSize() {
-	fo.Streamer.setSize(fo.Width, fo.Height-5)
+	fo.Streamer.SetSize(fo.Width, fo.Height-2)
 }
 
 func (fo *FramesOrchestrate) setConfirm() {
@@ -95,29 +93,30 @@ func (fo *FramesOrchestrate) setCancel() {
 }
 
 func (fo *FramesOrchestrate) setStreamer() {
-	fo.Streamer = newStreamer()
+	fo.Streamer = tuisupport.NewStreamer()
 }
 
 func (fo *FramesOrchestrate) confirm() (c tea.Cmd) {
-	result := fo.Body.call(
+	result := &controllers.Result{}
+	result, c = fo.Body.App.call(
 		controllers.FrameOrchestrationsCreate,
 		&controllers.FrameOrchestrationsCreateParams{
 			Frame: fo.ID,
 		},
-		"..",
+		tuisupport.Open(".."),
 	)
 	if result != nil {
 		fo.Cancel.Enabled(false)
 		fo.Confirm.Enabled(false)
-		fo.Streamer.setStream(result.Stream)
+		fo.Streamer.SetStream(result.Stream)
 		fo.IsStreaming = true
-		c = fo.Streamer.run()
+		c = fo.Streamer.Run()
 	}
 	return
 }
 
 func (fo *FramesOrchestrate) cancel() (c tea.Cmd) {
-	c = Open("..")
+	c = tuisupport.Open("..")
 	return
 }
 
@@ -126,12 +125,11 @@ func (fo *FramesOrchestrate) focusChain() (fc []tuisupport.Focuser) {
 		fo.Cancel,
 		fo.Confirm,
 	}
-	fc = append(fc, fo.Streamer.focusChain()...)
+	fc = append(fc, fo.Streamer.FocusChain()...)
 	return
 }
 
-// func (fo *FramesOrchestrate) Focus(aspect string) (c tea.Cmd) {
-// 	return
-// }
-
-// func (fo *FramesOrchestrate) Blur() {}
+func (fo *FramesOrchestrate) isFocus() (is bool) {
+	is = fo.Cancel.IsFocus || fo.Confirm.IsFocus
+	return
+}

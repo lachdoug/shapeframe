@@ -6,9 +6,8 @@ import (
 )
 
 type FramesUpdateParams struct {
-	Workspace string
-	Frame     string
-	Updates   map[string]any
+	Frame   string
+	Updates map[string]string
 }
 
 type FramesUpdateResult struct {
@@ -29,15 +28,12 @@ func FramesUpdate(params *Params) (result *Result, err error) {
 	var f *models.Frame
 	var vn *validations.Validation
 
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace", "Frame",
-	)
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
-		"Frames",
+	if w, err = models.ResolveWorkspace(
+		"Frames", "Frame",
 	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, p.Frame,
+	if f, err = models.ResolveFrame(w, p.Frame,
 		"Configuration",
 	); err != nil {
 		return

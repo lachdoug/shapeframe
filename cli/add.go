@@ -10,7 +10,6 @@ func add() (commandset any) {
 		Commands: cs(
 			addShape,
 			addFrame,
-			addWorkspace,
 			addRepository,
 			addDirectory,
 		),

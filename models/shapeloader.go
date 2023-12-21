@@ -103,38 +103,26 @@ func (sl *ShapeLoader) loadShaper() (err error) {
 
 func (sl *ShapeLoader) loadConfiguration() (err error) {
 	if sl.Configuration {
-		if err = sl.setShapeConfiguration(); err != nil {
+		sl.setConfiguration()
+		if err = sl.Shape.ShapeConfiguration.Shape.load(sl.ConfigurationLoads...); err != nil {
 			return
 		}
-		if len(sl.ConfigurationLoads) > 0 {
-			if err = sl.Shape.ShapeConfiguration.load(sl.ConfigurationLoads...); err != nil {
-				return
-			}
-		}
-		if err = sl.setFrameShapeConfiguration(); err != nil {
+		if err = sl.Shape.ShapeConfiguration.Frame.load(sl.ConfigurationLoads...); err != nil {
 			return
-		}
-		if len(sl.ConfigurationLoads) > 0 {
-			if err = sl.Shape.FrameShapeConfiguration.load(sl.ConfigurationLoads...); err != nil {
-				return
-			}
 		}
 	}
 	return
 }
 
-func (sl *ShapeLoader) setShapeConfiguration() (err error) {
-	c := NewConfiguration(sl.Shape.ID, "shape", "shape", sl.Shape.Shaper.Shape)
-	queries.Lookup(c)
-	sl.Shape.ShapeConfiguration = c
-	return
-}
-
-func (sl *ShapeLoader) setFrameShapeConfiguration() (err error) {
-	c := NewConfiguration(sl.Shape.ID, "shape", "frame", sl.Shape.Frame.Framer.Shape)
-	queries.Lookup(c)
-	sl.Shape.FrameShapeConfiguration = c
-	return
+func (sl *ShapeLoader) setConfiguration() {
+	sc := NewConfiguration(sl.Shape.ID, "shape", "shape", sl.Shape.Shaper.Shape)
+	queries.Lookup(sc)
+	fc := NewConfiguration(sl.Shape.ID, "shape", "frame", sl.Shape.Frame.Framer.Shape)
+	queries.Lookup(fc)
+	sl.Shape.ShapeConfiguration = &ShapeConfiguration{
+		Shape: sc,
+		Frame: fc,
+	}
 }
 
 func (sl *ShapeLoader) setShaper() (err error) {

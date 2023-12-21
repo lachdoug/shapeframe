@@ -6,8 +6,7 @@ import (
 )
 
 type DirectoriesDeleteParams struct {
-	Workspace string
-	Path      string
+	Path string
 }
 
 type DirectoriesDeleteResult struct {
@@ -25,8 +24,7 @@ func DirectoriesDelete(params *Params) (result *Result, err error) {
 		return
 	}
 
-	uc := models.ResolveUserContext("Workspaces", "Workspace")
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
+	if w, err = models.ResolveWorkspace(
 		"Directories",
 	); err != nil {
 		return

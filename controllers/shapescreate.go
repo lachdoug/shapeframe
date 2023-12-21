@@ -6,11 +6,10 @@ import (
 )
 
 type ShapesCreateParams struct {
-	Workspace string
-	Frame     string
-	Shaper    string
-	Shape     string
-	About     string
+	Frame  string
+	Shaper string
+	Shape  string
+	About  string
 }
 
 type ShapesCreateResult struct {
@@ -26,15 +25,12 @@ func ShapesCreate(params *Params) (result *Result, err error) {
 	var vn *validations.Validation
 	p := params.Payload.(*ShapesCreateParams)
 
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace", "Frame",
-	)
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
-		"Frames",
+	if w, err = models.ResolveWorkspace(
+		"Frames", "Frame",
 	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, p.Frame,
+	if f, err = models.ResolveFrame(w, p.Frame,
 		"Shapes", "Workspace.Shapers",
 	); err != nil {
 		return

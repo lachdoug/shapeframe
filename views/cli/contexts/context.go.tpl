@@ -1,12 +1,9 @@
 {{ define "contexts/context" -}}
-{{ if not (.Workspace) }}<none>{{ else }}
-Workspace: {{ .Workspace -}}
-{{ if .Frame }}
+{{ if not (.Frame) }}<unset>{{ else }}
 Frame: {{ .Frame -}}
 {{ end -}}
 {{ if .Shape }}
 Shape: {{ .Shape -}}
-{{ end -}}
 {{ end -}}
 {{ end -}}
 

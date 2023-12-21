@@ -5,9 +5,8 @@ import (
 )
 
 type RepositoryBranchesUpdateParams struct {
-	Workspace string
-	URI       string
-	Branch    string
+	URI    string
+	Branch string
 }
 
 type RepositoryBranchesUpdateResult struct {
@@ -21,8 +20,7 @@ func RepositoryBranchesUpdate(params *Params) (result *Result, err error) {
 	var w *models.Workspace
 	var r *models.Repository
 
-	uc := models.ResolveUserContext("Workspaces", "Workspace")
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
+	if w, err = models.ResolveWorkspace(
 		"Repositories",
 	); err != nil {
 		return

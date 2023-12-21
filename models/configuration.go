@@ -11,14 +11,20 @@ import (
 )
 
 type Configuration struct {
-	gorm.Model
-	OwnerID      uint
-	OwnerType    string
-	ConfigType   string
-	SettingsJSON datatypes.JSON
+	gorm.Model   `yaml:"-"`
+	OwnerID      uint              `yaml:"-"`
+	OwnerType    string            `yaml:"-"`
+	ConfigType   string            `yaml:"-"`
+	SettingsJSON datatypes.JSON    `yaml:"-"`
 	Settings     map[string]string `gorm:"-"`
+	Info         []map[string]any  `gorm:"-"`
 	Form         []*FormComponent  `gorm:"-"`
-	// CipherKey    string                   `gorm:"-"`
+}
+
+type ConfigurationInspector struct {
+	Settings     map[string]string
+	SettingsMaps []map[string]string
+	Info         []map[string]any
 }
 
 func NewConfiguration(
@@ -36,6 +42,15 @@ func NewConfiguration(
 	return
 }
 
+func (c *Configuration) Inspect() (ci *ConfigurationInspector) {
+	ci = &ConfigurationInspector{
+		Settings:     c.Settings,
+		SettingsMaps: c.SettingsMaps(),
+		Info:         c.Info,
+	}
+	return
+}
+
 func (c *Configuration) load(loads ...string) (err error) {
 	cl := NewConfigurationLoader(c, loads)
 	cl.load()
@@ -44,19 +59,12 @@ func (c *Configuration) load(loads ...string) (err error) {
 
 func (c *Configuration) Update(updates map[string]string) (vn *validations.Validation) {
 	c.Settings = updates
-	c.loadFormComponents()
 	if vn = c.validation(); vn.IsInvalid() {
 		return
 	}
 	c.SettingsJSON = utils.JsonMarshal(c.Settings)
 	c.Save()
 	return
-}
-
-func (c *Configuration) loadFormComponents() {
-	for _, fmc := range c.Form {
-		fmc.Load()
-	}
 }
 
 func (c *Configuration) validation() (vn *validations.Validation) {
@@ -102,48 +110,13 @@ func (c *Configuration) fieldValidation(fmc *FormComponent, vn *validations.Vali
 	fmc.ValueValidation(v, vn)
 }
 
-func (c *Configuration) Info() (ms []map[string]string) {
-	ci := NewConfigurationInfo(c)
-	for _, fmc := range c.Form {
-		c.componentInfo(fmc, ci)
+func (c *Configuration) SettingsMaps() (ms []map[string]string) {
+	ms = []map[string]string{}
+	for k, v := range c.Settings {
+		m := map[string]string{}
+		m[k] = v
+		ms = append(ms, m)
 	}
-	ms = ci.Maps
-	return
-}
-
-func (c *Configuration) componentInfo(fmc *FormComponent, ci *ConfigurationInfo) {
-	if c.isDependMatch(fmc.Depend) {
-		if fmc.Type == "row" {
-			c.rowInfo(fmc, ci)
-		} else {
-			ci.Add(fmc)
-		}
-	}
-}
-
-func (c *Configuration) rowInfo(fmr *FormComponent, ci *ConfigurationInfo) {
-	for _, fmc := range fmr.Cols {
-		c.componentInfo(fmc, ci)
-	}
-}
-
-func (c *Configuration) Populate(vs []string) (u map[string]string, err error) {
-	// u = map[string]string{}
-	// if len(vs) != len(c.Properties) {
-	// 	err = errors.Errorf(
-	// 		"received %d configuration settings when %d expected",
-	// 		len(vs),
-	// 		len(c.Properties),
-	// 	)
-	// 	return
-	// }
-	// for i, cp := range c.Properties {
-	// 	v := ""
-	// 	if i < len(vs) {
-	// 		v = vs[i]
-	// 	}
-	// 	u[cp.Key] = v
-	// }
 	return
 }
 

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"sf/app/errors"
+	"sf/controllers"
 	"sf/tui/tuisupport"
 	"sf/utils"
 
@@ -13,14 +15,12 @@ import (
 )
 
 type App struct {
-	Path   string
-	TopBar *TopBar
-	TopNav *TopNav
-	Body   *Body
-	Width  int
-	Height int
-	// IsHover    bool
-	// IsFocus    bool
+	Path       string
+	TopBar     *TopBar
+	TopNav     *TopNav
+	Body       *Body
+	Width      int
+	Height     int
 	FocusChain []tuisupport.Focuser
 	FocusIndex int
 }
@@ -31,13 +31,12 @@ func newApp() (a *App) {
 }
 
 func (a *App) Init() (c tea.Cmd) {
-	a.Path = "/"
+	a.Path = "/frames"
 	a.setComponents()
 	c = tea.Batch(
 		a.TopBar.Init(),
 		a.TopNav.Init(),
 		a.Body.Init(),
-		// a.focus("first", "next"),
 		a.setFocus(),
 	)
 	return
@@ -46,7 +45,7 @@ func (a *App) Init() (c tea.Cmd) {
 func (a *App) focusOn(target tuisupport.Focuser) (c tea.Cmd) {
 	for i, f := range a.FocusChain {
 		if f == target {
-			a.FocusChain[a.FocusIndex].Blur()
+			a.blur()
 			a.FocusIndex = i
 			c = a.Focus("next")
 			break
@@ -59,11 +58,18 @@ func (a *App) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 	m = a
 	cs := []tea.Cmd{}
 	switch msg := msg.(type) {
-	case tuisupport.Navigation:
+	case tuisupport.NavigationMsg:
 		c = a.open(msg.Path)
+		return
+	case tuisupport.ReloadMsg:
+		c = a.Init()
+		a.setSize()
 		return
 	case tuisupport.TakeFocus:
 		c = a.focusOn(msg)
+		return
+	case ClearErrorMsg:
+		a.Body.Error = nil
 		return
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -77,18 +83,8 @@ func (a *App) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 			c = a.previous()
 			return
 		case tea.KeyCtrlLeft:
-			c = Open("..")
+			c = tuisupport.Open("..")
 			return
-
-			// case tea.KeyEnter, tea.KeyTab, tea.KeyShiftTab:
-			// 	if a.FocusIndex == 0 {
-			// 		_, c = a.TopBar.Update(msg)
-			// 	} else if a.FocusIndex == 1 {
-			// 		_, c = a.TopNav.Update(msg)
-			// 	} else {
-			// 		_, c = a.Body.Update(msg)
-			// 	}
-			// 	return
 		}
 	case tea.WindowSizeMsg:
 		a.Width = msg.Width
@@ -127,13 +123,14 @@ func (a *App) setSize() {
 	w, h := utils.TerminalSize()
 	a.Width = w
 	a.Height = h
-	a.TopBar.setSize(w, 1)
-	a.TopNav.setSize(w, 3)
-	a.Body.setSize(w, h-4)
+	a.TopBar.setSize(w)
+	a.TopNav.setSize(w)
+	a.Body.setSize(w, h-5)
 }
 
 func (a *App) open(path string) (c tea.Cmd) {
-	a.FocusChain[a.FocusIndex].Blur()
+	a.Body.Error = nil
+	a.blur()
 	if path[:1] == "/" {
 		a.Path = path
 	} else {
@@ -148,7 +145,7 @@ func (a *App) open(path string) (c tea.Cmd) {
 	return
 }
 
-func (a *App) matchRoute(route string) (is bool, captures []string) {
+func (a *App) MatchRoute(route string) (is bool, captures []string) {
 	exp := regexp.MustCompile("^" + route + "$")
 	match := exp.FindStringSubmatch(a.Path)
 	if len(match) == 0 {
@@ -171,7 +168,8 @@ func (a *App) setFocus() (c tea.Cmd) {
 
 func (a *App) navFocusIndex() (i int) {
 	i = len(a.TopBar.focusChain()) + len(a.TopNav.focusChain())
-	// i equals length of a.FocusChain when body has not focusable components.
+	// i equals length of a.FocusChain when body has no focusable components.
+	// Focus on title (i.e. i = 0) when body is not focusable.
 	if i == len(a.FocusChain) {
 		i = 0
 	}
@@ -183,8 +181,12 @@ func (a *App) Focus(aspect string) (c tea.Cmd) {
 	return
 }
 
-func (a *App) next() (c tea.Cmd) {
+func (a *App) blur() {
 	a.FocusChain[a.FocusIndex].Blur()
+}
+
+func (a *App) next() (c tea.Cmd) {
+	a.blur()
 	a.FocusIndex++
 	if a.FocusIndex == len(a.FocusChain) {
 		a.FocusIndex = 0
@@ -194,11 +196,36 @@ func (a *App) next() (c tea.Cmd) {
 }
 
 func (a *App) previous() (c tea.Cmd) {
-	a.FocusChain[a.FocusIndex].Blur()
+	a.blur()
 	a.FocusIndex--
 	if a.FocusIndex == -1 {
 		a.FocusIndex = len(a.FocusChain) - 1
 	}
 	c = a.Focus("previous")
+	return
+}
+
+func (a *App) call(
+	controller func(*controllers.Params) (*controllers.Result, error),
+	params any,
+	callback tea.Cmd,
+) (result *controllers.Result, c tea.Cmd) {
+	var err error
+	if result, err = controller(&controllers.Params{Payload: params}); err == nil && result.Validation.IsInvalid() {
+		err = errors.ValidationError(result.Validation.Maps())
+	}
+	if err != nil {
+		a.blur()
+		result = nil
+		a.Body.Error = newError(
+			a.Body,
+			err,
+			callback,
+		)
+		c = tea.Batch(
+			a.Body.Error.Init(),
+			a.setFocus(),
+		)
+	}
 	return
 }

@@ -4,39 +4,23 @@ import (
 	"sf/models"
 )
 
-type ShapersIndexParams struct {
-	Workspace string // Limit list to workspace
-}
-
 type ShapersIndexItemResult struct {
 	Workspace string
+	Shaper    string
 	URI       string
 	About     string
 }
 
 func ShapersIndex(params *Params) (result *Result, err error) {
+	var w *models.Workspace
 	var srs []*models.Shaper
-	p := params.Payload.(*ShapersIndexParams)
 
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace",
-	)
-	if p.Workspace == "" {
-		for _, w := range uc.Workspaces {
-			if err = w.Load("Shapers"); err != nil {
-				return
-			}
-			srs = append(srs, w.Shapers...)
-		}
-	} else {
-		var w *models.Workspace
-		if w, err = models.ResolveWorkspace(uc, p.Workspace,
-			"Shapers",
-		); err != nil {
-			return
-		}
-		srs = w.Shapers
+	if w, err = models.ResolveWorkspace(
+		"Shapers",
+	); err != nil {
+		return
 	}
+	srs = w.Shapers
 
 	r := []*ShapersIndexItemResult{}
 	var uri string
@@ -46,6 +30,7 @@ func ShapersIndex(params *Params) (result *Result, err error) {
 		}
 		r = append(r, &ShapersIndexItemResult{
 			Workspace: sr.Workspace.Name,
+			Shaper:    sr.Name,
 			URI:       uri,
 			About:     sr.About,
 		})

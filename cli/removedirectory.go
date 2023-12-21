@@ -11,13 +11,8 @@ func removeDirectory() (command any) {
 		Summary: "Remove a directory from a workspace",
 		Aliases: ss("d"),
 		Usage: ss(
-			"sf remove directory [options] [path]",
+			"sf remove directory [options] PATH",
 			"An absolute or relative (to working directory) path must be provided as an argument",
-			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
-		),
-		Flags: ss(
-			"string", "workspace", "Workspace name",
 		),
 		Handler:    removeDirectoryHandler,
 		Controller: controllers.DirectoriesDelete,
@@ -29,8 +24,7 @@ func removeDirectory() (command any) {
 func removeDirectoryHandler(context *cliapp.Context) (params *controllers.Params, err error) {
 	params = &controllers.Params{
 		Payload: &controllers.DirectoriesDeleteParams{
-			Workspace: context.StringFlag("workspace"),
-			Path:      context.Argument(0),
+			Path: context.Argument(0),
 		},
 	}
 	return

@@ -11,14 +11,9 @@ func checkout() (command any) {
 		Summary: "Checkout a repository branch",
 		Aliases: ss("ck"),
 		Usage: ss(
-			"sf branch [options] [URI] [branch]",
+			"sf branch [options] URI BRANCH",
 			"A repository URI must be provided as the first argument",
 			"A branch name must be provided as the second argument",
-			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
-		),
-		Flags: ss(
-			"string", "workspace", "Workspace name",
 		),
 		Handler:    checkoutHandler,
 		Controller: controllers.RepositoryBranchesUpdate,
@@ -30,9 +25,8 @@ func checkout() (command any) {
 func checkoutHandler(context *cliapp.Context) (params *controllers.Params, err error) {
 	params = &controllers.Params{
 		Payload: &controllers.RepositoryBranchesUpdateParams{
-			Workspace: context.StringFlag("workspace"),
-			URI:       context.Argument(0),
-			Branch:    context.Argument(1),
+			URI:    context.Argument(0),
+			Branch: context.Argument(1),
 		},
 	}
 	return

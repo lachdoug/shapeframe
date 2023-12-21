@@ -6,11 +6,13 @@ import (
 )
 
 type WorkspacesCreateParams struct {
-	Workspace string
+	Directory string
+	Name      string
 	About     string
 }
 
 type WorkspacesCreateResult struct {
+	Directory string
 	Workspace string
 }
 
@@ -19,14 +21,14 @@ func WorkspacesCreate(params *Params) (result *Result, err error) {
 	var w *models.Workspace
 	var vn *validations.Validation
 
-	uc := models.ResolveUserContext("Workspaces")
-	if w, vn, err = models.CreateWorkspace(uc, p.Workspace, p.About); err != nil {
+	if w, vn, err = models.CreateWorkspace(p.Directory, p.Name, p.About); err != nil {
 		return
 	}
 
 	result = &Result{
 		Payload: &WorkspacesCreateResult{
 			Workspace: w.Name,
+			Directory: w.Directory(),
 		},
 		Validation: vn,
 	}

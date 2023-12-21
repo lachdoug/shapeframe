@@ -5,9 +5,8 @@ import (
 )
 
 type ShapesDeleteParams struct {
-	Workspace string
-	Frame     string
-	Shape     string
+	Frame string
+	Shape string
 }
 
 type ShapesDeleteResult struct {
@@ -22,24 +21,21 @@ func ShapesDelete(params *Params) (result *Result, err error) {
 	var s *models.Shape
 	p := params.Payload.(*ShapesDeleteParams)
 
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace", "Frame", "Shape",
-	)
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
-		"Frames",
+	if w, err = models.ResolveWorkspace(
+		"Frames", "Frame", "Shape",
 	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, p.Frame,
+	if f, err = models.ResolveFrame(w, p.Frame,
 		"Shapes",
 	); err != nil {
 		return
 	}
-	if s, err = models.ResolveShape(uc, f, p.Shape); err != nil {
+	if s, err = models.ResolveShape(w, f, p.Shape); err != nil {
 		return
 	}
-	if uc.Shape != nil && uc.Shape.ID == s.ID {
-		uc.Clear("Shape")
+	if w.Shape != nil && w.Shape.ID == s.ID {
+		w.Clear("Shape")
 	}
 	s.Delete()
 

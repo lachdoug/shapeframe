@@ -6,16 +6,15 @@ import (
 )
 
 type FrameConfigurationsUpdateParams struct {
-	Workspace string
-	Frame     string
-	Updates   map[string]string
+	Frame   string
+	Updates map[string]string
 }
 
 type FrameConfigurationsUpdateResult struct {
 	Workspace string
 	Frame     string
-	From      []map[string]string
-	To        []map[string]string
+	From      models.ConfigurationInspector
+	To        models.ConfigurationInspector
 }
 
 func FrameConfigurationsUpdate(params *Params) (result *Result, err error) {
@@ -24,14 +23,13 @@ func FrameConfigurationsUpdate(params *Params) (result *Result, err error) {
 	var f *models.Frame
 	var vn *validations.Validation
 
-	uc := models.ResolveUserContext("Workspaces", "Workspace", "Frame")
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
-		"Frames",
+	if w, err = models.ResolveWorkspace(
+		"Frames", "Frame",
 	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, p.Frame,
-		"Configuration",
+	if f, err = models.ResolveFrame(w, p.Frame,
+		"Configuration.Info",
 	); err != nil {
 		return
 	}
@@ -39,12 +37,12 @@ func FrameConfigurationsUpdate(params *Params) (result *Result, err error) {
 	r := &FrameConfigurationsUpdateResult{
 		Workspace: w.Name,
 		Frame:     f.Name,
-		From:      f.Configuration.Info(),
+		From:      *f.Configuration.Inspect(),
 	}
 
 	vn = f.Configuration.Update(p.Updates)
 
-	r.To = f.Configuration.Info()
+	r.To = *f.Configuration.Inspect()
 
 	result = &Result{
 		Payload:    r,

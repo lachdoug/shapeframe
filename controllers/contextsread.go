@@ -11,13 +11,17 @@ type ContextsReadResult struct {
 }
 
 func ContextsRead(params *Params) (result *Result, err error) {
-	uc := models.ResolveUserContext("Workspace", "Frame", "Shape")
+	var w *models.Workspace
+	if w, err = models.ResolveWorkspace(
+		"Frame", "Shape",
+	); err != nil {
+		return
+	}
 
 	result = &Result{
 		Payload: &ContextsReadResult{
-			Workspace: uc.WorkspaceName(),
-			Frame:     uc.FrameName(),
-			Shape:     uc.ShapeName(),
+			Frame: w.FrameName(),
+			Shape: w.ShapeName(),
 		},
 	}
 	return

@@ -10,7 +10,6 @@ func remove() (commandset any) {
 		Commands: cs(
 			removeShape,
 			removeFrame,
-			removeWorkspace,
 			removeRepository,
 			removeDirectory,
 		),

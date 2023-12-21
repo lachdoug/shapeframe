@@ -3,6 +3,7 @@ package database
 import (
 	"log"
 	"os"
+	"sf/app/dirs"
 	"sf/app/errors"
 	"sf/utils"
 
@@ -51,10 +52,10 @@ func fileLogger() (fLog logger.Interface) {
 }
 
 func dbFilePath() (dbFilePath string) {
-	dbFilePath = utils.DataDir("sf.db")
+	dbFilePath = dirs.WorkspaceDir("sf.db")
 	return
 }
 func dbLogFilePath() (dbLogFilePath string) {
-	dbLogFilePath = utils.LogDir("sf.db.log")
+	dbLogFilePath = dirs.WorkspaceDir("sf.db.log")
 	return
 }

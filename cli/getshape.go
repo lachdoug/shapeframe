@@ -14,13 +14,10 @@ func getShape() (command any) {
 			"sf inspect shape [options] [name]",
 			"Provide an optional shape name as an argument",
 			"  Uses shape context when not provided",
-			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
 			"Provide an optional frame name using the -frame flag",
 			"  Uses frame context when not provided",
 		),
 		Flags: ss(
-			"string", "workspace", "Workspace name",
 			"string", "frame", "Frame name",
 		),
 		Handler:    getShapeHandler,
@@ -28,7 +25,8 @@ func getShape() (command any) {
 		Viewer: cliapp.View(
 			"shapes/read",
 			"configurations/configuration",
-			"configurations/datum",
+			"configurations/settings",
+			"configurations/setting",
 		),
 	}
 	return
@@ -37,9 +35,8 @@ func getShape() (command any) {
 func getShapeHandler(context *cliapp.Context) (params *controllers.Params, err error) {
 	params = &controllers.Params{
 		Payload: &controllers.ShapesReadParams{
-			Workspace: context.StringFlag("workspace"),
-			Frame:     context.StringFlag("frame"),
-			Shape:     context.Argument(0),
+			Frame: context.StringFlag("frame"),
+			Shape: context.Argument(0),
 		},
 	}
 	return

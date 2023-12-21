@@ -7,15 +7,12 @@ import (
 
 func getWorkspace() (command any) {
 	command = &cliapp.Command{
-		Name:    "inspect",
-		Summary: "Inspect workspace",
+		Name:    "workspace",
+		Summary: "Get workspace",
 		Aliases: ss("w"),
 		Usage: ss(
-			"sf inspect workspace [options] [name]",
-			"Provide an optional workspace name as an argument",
-			"  Uses workspace context when not provided",
+			"sf get workspace",
 		),
-		Handler:    getWorkspaceHandler,
 		Controller: controllers.WorkspacesRead,
 		Viewer: cliapp.View(
 			"workspaces/read",
@@ -23,15 +20,6 @@ func getWorkspace() (command any) {
 			"workspaces/repositories",
 			"workspaces/directories",
 		),
-	}
-	return
-}
-
-func getWorkspaceHandler(context *cliapp.Context) (params *controllers.Params, err error) {
-	params = &controllers.Params{
-		Payload: &controllers.WorkspacesReadParams{
-			Workspace: context.Argument(0),
-		},
 	}
 	return
 }

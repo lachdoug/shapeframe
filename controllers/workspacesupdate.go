@@ -6,14 +6,12 @@ import (
 )
 
 type WorkspacesUpdateParams struct {
-	Workspace string
-	Updates   map[string]any
+	Updates map[string]string
 }
 
 type WorkspacesUpdateResult struct {
-	Workspace string
-	From      *WorkspacesUpdateResultDetails
-	To        *WorkspacesUpdateResultDetails
+	From *WorkspacesUpdateResultDetails
+	To   *WorkspacesUpdateResultDetails
 }
 
 type WorkspacesUpdateResultDetails struct {
@@ -26,13 +24,11 @@ func WorkspacesUpdate(params *Params) (result *Result, err error) {
 	var w *models.Workspace
 	var vn *validations.Validation
 
-	uc := models.ResolveUserContext("Workspaces", "Workspace")
-	if w, err = models.ResolveWorkspace(uc, p.Workspace); err != nil {
+	if w, err = models.ResolveWorkspace(); err != nil {
 		return
 	}
 
 	r := &WorkspacesUpdateResult{
-		Workspace: w.Name,
 		From: &WorkspacesUpdateResultDetails{
 			Name:  w.Name,
 			About: w.About,

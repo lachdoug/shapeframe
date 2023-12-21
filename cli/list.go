@@ -8,7 +8,6 @@ func list() (commandset any) {
 		Summary: "List shapes, frames, shapers, framers or workspaces",
 		Aliases: ss("ls"),
 		Commands: cs(
-			listWorkspaces,
 			listFrames,
 			listShapes,
 			listFramers,

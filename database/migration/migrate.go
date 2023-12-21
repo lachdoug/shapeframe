@@ -7,7 +7,6 @@ import (
 
 func Migrate() {
 	if err := database.DB.AutoMigrate(
-		&models.UserContext{},
 		&models.Workspace{},
 		&models.Frame{},
 		&models.Shape{},

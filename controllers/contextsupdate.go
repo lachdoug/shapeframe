@@ -5,9 +5,8 @@ import (
 )
 
 type ContextsUpdateParams struct {
-	Workspace string
-	Frame     string
-	Shape     string
+	Frame string
+	Shape string
 }
 
 type ContextsUpdateResult struct {
@@ -21,50 +20,40 @@ func ContextsUpdate(params *Params) (result *Result, err error) {
 	var s *models.Shape
 	p := params.Payload.(*ContextsUpdateParams)
 
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace", "Frame", "Shape",
-	)
+	if w, err = models.ResolveWorkspace(
+		"Frames", "Frame", "Shape",
+	); err != nil {
+		return
+	}
 
 	r := &ContextsUpdateResult{From: &ContextsReadResult{
-		Workspace: uc.WorkspaceName(),
-		Frame:     uc.FrameName(),
-		Shape:     uc.ShapeName(),
+		Frame: w.FrameName(),
+		Shape: w.ShapeName(),
 	}}
 
-	if p.Workspace != "" {
-		if w, err = models.ResolveWorkspace(uc, p.Workspace,
-			"Frames",
-		); err != nil {
-			return
-		}
-		uc.Workspace = w
-	} else {
-		uc.Clear("Workspace")
-	}
 	if p.Frame != "" {
-		if f, err = models.ResolveFrame(uc, w, p.Frame,
+		if f, err = models.ResolveFrame(w, p.Frame,
 			"Shapes",
 		); err != nil {
 			return
 		}
-		uc.Frame = f
+		w.Frame = f
 	} else {
-		uc.Clear("Frame")
+		w.Clear("Frame")
 	}
 	if p.Shape != "" {
-		if s, err = models.ResolveShape(uc, f, p.Shape); err != nil {
+		if s, err = models.ResolveShape(w, f, p.Shape); err != nil {
 			return
 		}
-		uc.Shape = s
+		w.Shape = s
 	} else {
-		uc.Clear("Shape")
+		w.Clear("Shape")
 	}
-	uc.Save()
+	w.Save()
 
 	r.To = &ContextsReadResult{
-		Workspace: uc.WorkspaceName(),
-		Frame:     uc.FrameName(),
-		Shape:     uc.ShapeName(),
+		Frame: w.FrameName(),
+		Shape: w.ShapeName(),
 	}
 	result = &Result{Payload: r}
 	return

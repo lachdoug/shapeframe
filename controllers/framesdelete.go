@@ -5,8 +5,7 @@ import (
 )
 
 type FramesDeleteParams struct {
-	Workspace string
-	Frame     string
+	Frame string
 }
 
 type FramesDeleteResult struct {
@@ -19,20 +18,17 @@ func FramesDelete(params *Params) (result *Result, err error) {
 	var f *models.Frame
 	p := params.Payload.(*FramesDeleteParams)
 
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace", "Frame", "Shape",
-	)
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
-		"Frames",
+	if w, err = models.ResolveWorkspace(
+		"Frames", "Frame",
 	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, p.Frame); err != nil {
+	if f, err = models.ResolveFrame(w, p.Frame); err != nil {
 		return
 	}
-	if uc.Frame != nil && uc.Frame.ID == f.ID {
-		uc.Clear("Shape")
-		uc.Clear("Frame")
+	if w.Frame != nil && w.Frame.ID == f.ID {
+		w.Clear("Shape")
+		w.Clear("Frame")
 	}
 	f.Delete()
 

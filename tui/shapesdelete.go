@@ -11,15 +11,14 @@ import (
 
 type ShapesDelete struct {
 	Body    *Body
-	WID     string
 	FID     string
 	ID      string
 	Cancel  *tuisupport.Button
 	Confirm *tuisupport.Button
 }
 
-func newShapesDelete(b *Body, wid string, fid string, id string) (sd *ShapesDelete) {
-	sd = &ShapesDelete{Body: b, WID: wid, FID: fid, ID: id}
+func newShapesDelete(b *Body, fid string, id string) (sd *ShapesDelete) {
+	sd = &ShapesDelete{Body: b, FID: fid, ID: id}
 	return
 }
 
@@ -43,7 +42,7 @@ func (sd *ShapesDelete) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 func (sd *ShapesDelete) View() (v string) {
 	style := lipgloss.NewStyle().Padding(1)
 	idStyle := lipgloss.NewStyle().Bold(true)
-	id := fmt.Sprintf("%s.%s.%s", sd.WID, sd.FID, sd.ID)
+	id := fmt.Sprintf("%s.%s", sd.FID, sd.ID)
 	msg := style.Render(fmt.Sprintf("Delete shape %s?", idStyle.Render(id)))
 	v = lipgloss.JoinVertical(lipgloss.Left,
 		msg,
@@ -76,21 +75,22 @@ func (sd *ShapesDelete) setCancel() {
 }
 
 func (sd *ShapesDelete) confirm() (c tea.Cmd) {
-	result := sd.Body.call(
+	result := &controllers.Result{}
+	result, c = sd.Body.App.call(
 		controllers.ShapesDelete,
 		&controllers.ShapesDeleteParams{
 			Shape: sd.ID,
 		},
-		"../..",
+		tuisupport.Open(".."),
 	)
 	if result != nil {
-		c = Open("../..")
+		c = tuisupport.Open("../..")
 	}
 	return
 }
 
 func (sd *ShapesDelete) cancel() (c tea.Cmd) {
-	c = Open("..")
+	c = tuisupport.Open("..")
 	return
 }
 
@@ -99,6 +99,11 @@ func (sd *ShapesDelete) focusChain() (fc []tuisupport.Focuser) {
 		sd.Cancel,
 		sd.Confirm,
 	}
+	return
+}
+
+func (sd *ShapesDelete) isFocus() (is bool) {
+	is = sd.Cancel.IsFocus || sd.Confirm.IsFocus
 	return
 }
 

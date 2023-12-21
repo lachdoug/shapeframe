@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"sf/tui/tuisupport"
 	"sf/utils"
 	"strings"
 
@@ -18,14 +19,14 @@ type Table struct {
 	Model         table.Model
 	MouseLocation tea.MouseMsg
 	Width         int
-	// Height        int
-	Lengths []int
-	// PageSize      int
-	Rows      []table.Row
-	Cols      []table.Column
-	IsFocus   bool
-	Selection int
-	ID        string
+	Height        int
+	Lengths       []int
+	PageSize      int
+	Rows          []table.Row
+	Cols          []table.Column
+	IsFocus       bool
+	Selection     int
+	ID            string
 }
 
 func NewTable(
@@ -69,7 +70,8 @@ func (t *Table) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 				}
 			}
 		case tea.MouseLeft:
-			if t.isMouseInRow(t.selectedID()) {
+			selectedID := t.selectedID()
+			if selectedID != "" && t.isMouseInRow(selectedID) {
 				c = t.enter()
 				return
 			}
@@ -139,12 +141,12 @@ func (t *Table) setCols() {
 	t.Cols = cols
 }
 
-// func (t *Table) setPageSize() {
-// 	t.PageSize = t.Height - 6
-// 	if t.PageSize < 1 {
-// 		t.PageSize = 1
-// 	}
-// }
+func (t *Table) setPageSize() {
+	t.PageSize = t.Height - 6
+	if t.PageSize < 1 {
+		t.PageSize = 1
+	}
+}
 
 func (t *Table) setModel() {
 	t.Model = table.New(t.Cols).
@@ -153,7 +155,7 @@ func (t *Table) setModel() {
 		WithHighlightedRow(t.Selection).
 		Focused(t.IsFocus).
 		WithTargetWidth(t.Width).
-		// WithPageSize(t.PageSize).
+		WithPageSize(t.PageSize).
 		HighlightStyle(lipgloss.NewStyle().Background(lipgloss.Color("0")))
 }
 
@@ -187,8 +189,8 @@ func (t *Table) zoneMark(id string, property string, value string) (z string) {
 
 func (t *Table) setSize(w int, h int) {
 	t.Width = w
-	// t.Height = h
-	// t.setPageSize()
+	t.Height = h
+	t.setPageSize()
 	t.setLengths()
 	t.setRows()
 	t.setCols()
@@ -196,7 +198,7 @@ func (t *Table) setSize(w int, h int) {
 }
 
 func (t *Table) enter() (c tea.Cmd) {
-	c = Open(t.Navigator(t.selectedID()))
+	c = tuisupport.Open(t.Navigator(t.selectedID()))
 	return
 }
 
@@ -216,7 +218,10 @@ func (t *Table) isMouseInRow(id string) (is bool) {
 }
 
 func (t *Table) selectedID() (id string) {
-	id = t.Model.HighlightedRow().Data["ID"].(string)
+	selected := t.Model.HighlightedRow().Data["ID"]
+	if selected != nil {
+		id = selected.(string)
+	}
 	return
 }
 

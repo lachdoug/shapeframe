@@ -12,11 +12,9 @@ func listShapes() (command any) {
 		Aliases: ss("s"),
 		Usage: ss(
 			"sf list shapes [options]",
-			"Provide an optional workspace name using the -workspace flag",
 			"Provide an optional frame name using the -frame flag",
 		),
 		Flags: ss(
-			"string", "workspace", "Workspace name",
 			"string", "frame", "Frame name",
 		),
 		Handler:    listShapesHandler,
@@ -29,8 +27,7 @@ func listShapes() (command any) {
 func listShapesHandler(context *cliapp.Context) (params *controllers.Params, err error) {
 	params = &controllers.Params{
 		Payload: &controllers.ShapesIndexParams{
-			Workspace: context.StringFlag("workspace"),
-			Frame:     context.StringFlag("frame"),
+			Frame: context.StringFlag("frame"),
 		},
 	}
 	return

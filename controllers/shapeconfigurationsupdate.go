@@ -6,18 +6,17 @@ import (
 )
 
 type ShapeConfigurationsUpdateParams struct {
-	Workspace string
-	Frame     string
-	Shape     string
-	Updates   map[string]string
+	Frame   string
+	Shape   string
+	Updates map[string]string
 }
 
 type ShapeConfigurationsUpdateResult struct {
 	Workspace string
 	Frame     string
 	Shape     string
-	From      []map[string]string
-	To        []map[string]string
+	From      models.ConfigurationInspector
+	To        models.ConfigurationInspector
 }
 
 func ShapeConfigurationsUpdate(params *Params) (result *Result, err error) {
@@ -27,21 +26,18 @@ func ShapeConfigurationsUpdate(params *Params) (result *Result, err error) {
 	var s *models.Shape
 	var vn *validations.Validation
 
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace", "Frame", "Shape",
-	)
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
-		"Frames",
+	if w, err = models.ResolveWorkspace(
+		"Frames", "Frame", "Shape",
 	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, p.Frame,
+	if f, err = models.ResolveFrame(w, p.Frame,
 		"Shapes",
 	); err != nil {
 		return
 	}
-	if s, err = models.ResolveShape(uc, f, p.Shape,
-		"Configuration",
+	if s, err = models.ResolveShape(w, f, p.Shape,
+		"Configuration.Info",
 	); err != nil {
 		return
 	}
@@ -50,12 +46,12 @@ func ShapeConfigurationsUpdate(params *Params) (result *Result, err error) {
 		Workspace: w.Name,
 		Frame:     f.Name,
 		Shape:     s.Name,
-		From:      s.ShapeConfiguration.Info(),
+		From:      *s.ShapeConfiguration.Shape.Inspect(),
 	}
 
-	vn = s.ShapeConfiguration.Update(p.Updates)
+	vn = s.ShapeConfiguration.Shape.Update(p.Updates)
 
-	r.To = s.ShapeConfiguration.Info()
+	r.To = *s.ShapeConfiguration.Shape.Inspect()
 
 	result = &Result{
 		Payload:    r,

@@ -15,11 +15,10 @@ type Shaper struct {
 	About     string
 	Shape     []*FormComponent
 	Connect   []*ShaperConnect
-	// ConfigurationFormSchema *FormSchema
-	Build   *ShaperBuild
-	Start   []string
-	Ports   [][]string
-	Volumes [][]string
+	Build     *ShaperBuild
+	Start     []string
+	Ports     [][]string
+	Volumes   [][]string
 }
 
 type ShaperBuild struct {

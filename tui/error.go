@@ -9,13 +9,16 @@ import (
 )
 
 type Error struct {
+	Body     *Body
 	Message  string
 	OK       *tuisupport.Button
-	Callback func() tea.Cmd
+	Callback tea.Cmd
 }
 
-func newError(err error, callback func() tea.Cmd) (e *Error) {
-	e = &Error{Message: err.Error(), Callback: callback}
+type ClearErrorMsg struct{}
+
+func newError(body *Body, err error, callback tea.Cmd) (e *Error) {
+	e = &Error{Body: body, Message: err.Error(), Callback: callback}
 	return
 }
 
@@ -41,5 +44,22 @@ func (e *Error) View() (v string) {
 }
 
 func (e *Error) setOK() {
-	e.OK = tuisupport.NewButton("error-ok", " OK ", e.Callback, 15)
+	e.OK = tuisupport.NewButton("error-ok", " OK ", e.sendClearMsg, 15)
+}
+
+func (e *Error) sendClearMsg() (c tea.Cmd) {
+	c = tea.Batch(
+		e.Callback,
+	)
+	return
+}
+
+func (e *Error) focusChain() (fc []tuisupport.Focuser) {
+	fc = []tuisupport.Focuser{e.OK}
+	return
+}
+
+func (e *Error) isFocus() (is bool) {
+	is = e.OK.IsFocus
+	return
 }

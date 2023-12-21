@@ -7,11 +7,10 @@ import (
 )
 
 type RepositoriesCreateParams struct {
-	Workspace string
-	URI       string
-	Protocol  string
-	Username  string
-	Password  string
+	URI      string
+	Protocol string
+	Username string
+	Password string
 }
 
 type RepositoriesCreateResult struct {
@@ -27,10 +26,7 @@ func RepositoriesCreate(params *Params) (result *Result, err error) {
 	var vn *validations.Validation
 	st := streams.StreamCreate()
 
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace",
-	)
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
+	if w, err = models.ResolveWorkspace(
 		"Repositories",
 	); err != nil {
 		return

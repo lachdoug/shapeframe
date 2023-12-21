@@ -20,7 +20,7 @@ func newShapesIndex(b *Body) (si *ShapesIndex) {
 }
 
 func (si *ShapesIndex) Init() (c tea.Cmd) {
-	si.setItems()
+	c = si.setItems()
 	si.setTable()
 	return
 }
@@ -40,27 +40,28 @@ func (si *ShapesIndex) setSize(w int, h int) {
 	si.Table.setSize(w, h)
 }
 
-func (si *ShapesIndex) setItems() {
-	result := si.Body.call(
+func (si *ShapesIndex) setItems() (c tea.Cmd) {
+	result := &controllers.Result{}
+	result, c = si.Body.App.call(
 		controllers.ShapesIndex,
 		nil,
-		"/",
+		tuisupport.Open(".."),
 	)
 	if result != nil {
 		si.Items = result.Payload.([]*controllers.ShapesIndexItemResult)
 	}
+	return
 }
 
 func (si *ShapesIndex) setTable() {
-	propeties := []string{"Workspace", "Frame", "Shape", "About"}
+	propeties := []string{"Frame", "Shape", "About"}
 	data := []map[string]string{}
 	for _, s := range si.Items {
 		data = append(data, map[string]string{
-			"ID":        fmt.Sprintf("%s.%s.%s", s.Workspace, s.Frame, s.Shape),
-			"Workspace": s.Workspace,
-			"Frame":     s.Frame,
-			"Shape":     s.Shape,
-			"About":     s.About,
+			"ID":    fmt.Sprintf("%s.%s", s.Frame, s.Shape),
+			"Frame": s.Frame,
+			"Shape": s.Shape,
+			"About": s.About,
 		})
 	}
 	navigator := func(id string) (p string) {
@@ -72,5 +73,10 @@ func (si *ShapesIndex) setTable() {
 
 func (si *ShapesIndex) focusChain() (fc []tuisupport.Focuser) {
 	fc = []tuisupport.Focuser{si.Table}
+	return
+}
+
+func (si *ShapesIndex) isFocus() (is bool) {
+	is = si.Table.IsFocus
 	return
 }

@@ -14,63 +14,68 @@ type FramesIndex struct {
 	Table *Table
 }
 
-func newFramesIndex(b *Body) (wi *FramesIndex) {
-	wi = &FramesIndex{Body: b}
+func newFramesIndex(b *Body) (fi *FramesIndex) {
+	fi = &FramesIndex{Body: b}
 	return
 }
 
-func (wi *FramesIndex) Init() (c tea.Cmd) {
-	wi.setItems()
-	wi.setTable()
-	// c = wi.Table.Init()
+func (fi *FramesIndex) Init() (c tea.Cmd) {
+	c = fi.setItems()
+	fi.setTable()
 	return
 }
 
-func (wi *FramesIndex) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
-	m = wi
-	_, c = wi.Table.Update(msg)
+func (fi *FramesIndex) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
+	m = fi
+	_, c = fi.Table.Update(msg)
 	return
 }
 
-func (wi *FramesIndex) View() (v string) {
-	v = wi.Table.View()
+func (fi *FramesIndex) View() (v string) {
+	v = fi.Table.View()
 	return
 }
 
-func (wi *FramesIndex) setSize(w int, h int) {
-	wi.Table.setSize(w, h)
+func (fi *FramesIndex) setSize(w int, h int) {
+	fi.Table.setSize(w, h)
 }
 
-func (wi *FramesIndex) setItems() {
-	result := wi.Body.call(
+func (fi *FramesIndex) setItems() (c tea.Cmd) {
+	result := &controllers.Result{}
+	result, c = fi.Body.App.call(
 		controllers.FramesIndex,
 		nil,
-		"/",
+		tuisupport.Open(".."),
 	)
 	if result != nil {
-		wi.Items = result.Payload.([]*controllers.FramesIndexItemResult)
+		fi.Items = result.Payload.([]*controllers.FramesIndexItemResult)
 	}
+	return
 }
 
-func (wi *FramesIndex) setTable() {
-	propeties := []string{"Workspace", "Frame", "About"}
+func (fi *FramesIndex) setTable() {
+	propeties := []string{"Frame", "About"}
 	data := []map[string]string{}
-	for _, f := range wi.Items {
+	for _, f := range fi.Items {
 		data = append(data, map[string]string{
-			"ID":        fmt.Sprintf("%s.%s", f.Workspace, f.Frame),
-			"Workspace": f.Workspace,
-			"Frame":     f.Frame,
-			"About":     f.About,
+			"ID":    f.Frame,
+			"Frame": f.Frame,
+			"About": f.About,
 		})
 	}
 	navigator := func(id string) (p string) {
 		p = fmt.Sprintf("/frames/@%s", id)
 		return
 	}
-	wi.Table = NewTable("frames", propeties, data, navigator)
+	fi.Table = NewTable("frames", propeties, data, navigator)
 }
 
-func (wi *FramesIndex) focusChain() (fc []tuisupport.Focuser) {
-	fc = []tuisupport.Focuser{wi.Table}
+func (fi *FramesIndex) focusChain() (fc []tuisupport.Focuser) {
+	fc = []tuisupport.Focuser{fi.Table}
+	return
+}
+
+func (fi *FramesIndex) isFocus() (is bool) {
+	is = fi.Table.IsFocus
 	return
 }

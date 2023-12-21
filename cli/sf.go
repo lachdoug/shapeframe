@@ -6,6 +6,10 @@ func sf() (sf *cliapp.Router) {
 	sf = &cliapp.Router{
 		Name:    "sf",
 		Summary: "Shapeframe",
+		Flags: ss(
+			"bool", "debug", "Execute command in debug mode",
+			"string", "directory", "Target workspace directory for command execution",
+		),
 		Description: ss(
 			"Use Shapeframe for provisioning and deployment",
 			"  Model systems",
@@ -13,6 +17,7 @@ func sf() (sf *cliapp.Router) {
 			"  Invoke running systems",
 		),
 		Commands: cs(
+			initialize,
 			get,
 			list,
 			label,
@@ -25,7 +30,7 @@ func sf() (sf *cliapp.Router) {
 			// join,
 			context,
 			orchestrate,
-			nuke,
+			terminalUserInterface,
 		),
 	}
 	return

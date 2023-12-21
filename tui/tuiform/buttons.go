@@ -62,59 +62,18 @@ func (btns *Buttons) setSubmit() {
 	)
 }
 
-// func (btns *Buttons) width() int         { return 0 }
-func (btns *Buttons) resize() {}
-
-// func (btns *Buttons) enter() (c tea.Cmd) { return nil }
-
-// func (btns *Buttons) next() (c tea.Cmd) {
-// 	btns.Blur()
-// 	btns.FocusIndex++
-// 	if btns.FocusIndex == 2 {
-// 		btns.FocusIndex = 1
-// 		c = btns.Form.next()
-// 	} else {
-// 		c = btns.Focus("next")
-// 	}
-// 	return
-// }
-
-// func (btns *Buttons) previous() (c tea.Cmd) {
-// 	btns.Blur()
-// 	btns.FocusIndex--
-// 	if btns.FocusIndex == -1 {
-// 		btns.FocusIndex = 0
-// 		c = btns.Form.previous()
-// 	} else {
-// 		c = btns.Focus("previous")
-// 	}
-// 	return
-// }
-
-// func (btns *Buttons) Focus(on ...string) (c tea.Cmd) {
-// 	if slices.Contains(on, "first") {
-// 		btns.FocusIndex = 0
-// 	} else if slices.Contains(on, "last") {
-// 		btns.FocusIndex = 1
-// 	}
-// 	if btns.FocusIndex == 0 {
-// 		c = btns.Submit.Focus(on...)
-// 	} else {
-// 		c = btns.Cancel.Focus(on...)
-// 	}
-// 	return
-// }
-
-// func (btns *Buttons) Blur() {
-// 	btns.Submit.Blur()
-// 	btns.Cancel.Blur()
-// }
+func (btns *Buttons) setWidth(int) {}
 
 func (btns *Buttons) FocusChain() (fc []tuisupport.Focuser) {
 	fc = []tuisupport.Focuser{
 		btns.Cancel,
 		btns.Submit,
 	}
+	return
+}
+
+func (btns *Buttons) isFocus() (is bool) {
+	is = btns.Cancel.IsFocus || btns.Submit.IsFocus
 	return
 }
 
@@ -126,8 +85,6 @@ func (btns *Buttons) depend() {
 	}
 }
 
-// func (btns *Buttons) set(string, string) {}
-// func (btns *Buttons) value() string      { return "" }
 func (btns *Buttons) validity() string { return "" }
 
 func (btns *Buttons) shown() []string { return nil }

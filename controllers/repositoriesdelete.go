@@ -5,8 +5,7 @@ import (
 )
 
 type RepositoriesDeleteParams struct {
-	Workspace string
-	URI       string
+	URI string
 }
 
 type RepositoriesDeleteResult struct {
@@ -19,8 +18,7 @@ func RepositoriesDelete(params *Params) (result *Result, err error) {
 	var r *models.Repository
 	p := params.Payload.(*RepositoriesDeleteParams)
 
-	uc := models.ResolveUserContext("Workspaces", "Workspace")
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
+	if w, err = models.ResolveWorkspace(
 		"Repositories",
 	); err != nil {
 		return

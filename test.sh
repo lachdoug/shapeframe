@@ -61,72 +61,67 @@ t() {
     echo -e "\n${yellowColor}$@${resetText}\n"   
 }
 
+nuke() {
+    echo "nuke workspace"
+    rm sf.log
+    rm sf.db
+    rm sf.db.log
+    rm -rf repos
+}
+
 # Config settings
 
 frame_config_yaml="
-color: red
-bar: "1"
-foo: cool
-wow: xyz
+Host: 0.0.0.0
 "
 shape_config_yaml="
 color: red
-bar: foo
-foo: cool
 "
-frame_shape_config_yaml="
+frameshape_config_yaml="
 restart: on-failure
 restart-on-failure: 3
 "
 
-t Nuking
-sf nuke -confirm
+t Clean slate
+nuke
 
-t Adding and removing workspaces
-sf a w W1
-sf rm w W1
-sf a w W1
-sf cx W1
-sf rm w
+t Initialize
+sf init
+sf g w
+nuke
+sf init -name Test -about "Workspace test"
+sf g w
+nuke
 
 t Adding and removing directories
-sf a w W1
-sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
-sf rm d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
-sf cx W1
+sf init
 sf a d /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
 sf rm d /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
-sf rm w
+nuke
 
 t Adding and removing repositories
-sf a w W1
-sf a r -workspace W1 github.com/lachdoug/shapeframe-apps
-sf rm r -workspace W1 github.com/lachdoug/shapeframe-apps
-sf cx W1
+sf init
 sf a r github.com/lachdoug/shapeframe-apps
+sf pull github.com/lachdoug/shapeframe-apps
 sf rm r github.com/lachdoug/shapeframe-apps
 sf a r -https github.com/lachdoug/shapeframe-apps
 sf pull github.com/lachdoug/shapeframe-apps
 sf checkout github.com/lachdoug/shapeframe-apps main
-sf rm w
+nuke
 
 t Adding and removing frames
-sf a w W1
-sf cx W1
+sf init
 sf a d /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
 sf a f docker-local
 sf rm f docker-local
 sf a f docker-local
 sf cx docker-local
 sf rm f
-sf cx ..
-sf a f -workspace W1 docker-local
-sf rm f -workspace W1 docker-local
-sf rm w W1
+sf cx
+nuke
 
 t Adding and removing shapes
-sf a w W1
-sf cx W1
+sf init
 sf a d /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
 sf a f docker-local
 sf cx docker-local
@@ -135,41 +130,26 @@ sf rm s apache
 sf cx ..
 sf a s -frame docker-local apache
 sf rm s -frame docker-local apache
-sf cx ..
-sf a s -workspace W1 -frame docker-local apache
-sf rm s -workspace W1 -frame docker-local apache
-sf rm w W1
+nuke
 
 t Listing
-sf a w W1
-sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
-sf a f -workspace W1 docker-local
-sf a s -workspace W1 -frame docker-local apache
-sf ls w
+sf init
+sf a r github.com/lachdoug/shapeframe-apps
+sf a d /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
+sf a f docker-local
+sf a s -frame docker-local apache
 sf ls f
 sf ls s
 sf ls sr
 sf ls fr
-sf ls f -workspace W1 
-sf ls s -workspace W1 
-sf ls sr -workspace W1 
-sf ls fr -workspace W1 
-sf cx W1
-sf ls f
-sf ls s
-sf ls sr
-sf ls fr
-sf rm w
+nuke
 
 t Reading
-sf a w W1
-sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
-sf a f -workspace W1 docker-local
-sf a s -workspace W1 -frame docker-local apache
-sf g w W1
-sf g f -workspace W1 docker-local
-sf g s -workspace W1 -frame docker-local apache
-sf cx W1
+sf init
+sf a r github.com/lachdoug/shapeframe-apps
+sf a d /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
+sf a f docker-local
+sf a s -frame docker-local apache
 sf g w
 sf g f docker-local
 sf g s -frame docker-local apache
@@ -178,90 +158,79 @@ sf g f
 sf g s apache
 sf cx apache
 sf g s
-sf rm w
+nuke
 
 t Inspecting
-sf a w W1
-sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
-sg i W1
-sf cx W1
+sf init
+sf a r github.com/lachdoug/shapeframe-apps
+sf a d /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
+sf a f docker-local
+sf a s -frame docker-local apache
 sf i
-sf rm w
+nuke
 
 t Contexting
+sf init
 sf cx
-sf a w W1
-sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
-sf a f -workspace W1 docker-local
-sf a s -workspace W1 -frame docker-local apache
-sf cx W1
-sf cx
+sf a d /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
+sf a f docker-local
+sf a s -frame docker-local apache
 sf cx docker-local
 sf cx
 sf cx apache
 sf cx
-sf rm w
+nuke
 
 t Configuring
-sf a w W1
-sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
-sf a f -workspace W1 docker-local
-sf a s -workspace W1 -frame docker-local apache
-sf cg f -workspace W1 -frame docker-local "$frame_config_yaml"
-sf cg s -workspace W1 -frame docker-local -shape apache "$shape_config_yaml"
-sf cg f-s -workspace W1 -frame docker-local -shape apache "$frame_shape_config_yaml"
-sf cx W1
+sf init
+sf a d /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
+sf a f docker-local
+sf a s -frame docker-local apache
 sf cg f -frame docker-local "$frame_config_yaml"
 sf cg s -frame docker-local -shape apache "$shape_config_yaml"
-sf cg f-s -frame docker-local -shape apache "$frame_shape_config_yaml"
+sf cg s-f -frame docker-local -shape apache "$frameshape_config_yaml"
 sf cx docker-local
 sf cg s -shape apache "$shape_config_yaml"
-sf cg f-s -shape apache "$frame_shape_config_yaml"
+sf cg s-f -shape apache "$frameshape_config_yaml"
 sf cx apache
 sf cg s "$shape_config_yaml"
-sf cg f-s "$frame_shape_config_yaml"
-sf rm w
+sf cg s-f "$frameshape_config_yaml"
+nuke
 
 t Labelling
-sf a w -about "Workspace One" W1 
-sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
-sf a f -workspace W1 docker-local
-sf a s -workspace W1 -frame docker-local apache
-sf ll w -name W1A -about "Workspace OneA" W1
-sf ll f -workspace W1A -name docker-localA -about "Deploy containers on local Docker EngineA" docker-local
-sf ll s -workspace W1A -frame docker-localA -name apacheA -about "Apache (Web Server)A" apache
-sf ll w -name W1B -about "Workspace OneB" W1A
-sf ll f -workspace W1B -name docker-localB -about "Deploy containers on local Docker EngineB" docker-localA
-sf ll s -workspace W1B -frame docker-localB -name apacheB -about "Apache (Web Server)B" apacheA
-sf cx W1B
-sf ll w -name W1C -about "Workspace OneC"
-sf ll f -name docker-localC -about "Deploy containers on local Docker EngineC" docker-localB
-sf ll s -frame docker-localC -name apacheC -about "Apache (Web Server)C" apacheB
-sf cx docker-localC
-sf ll f -name docker-localD -about "Deploy containers on local Docker EngineD"
-sf ll s -name apacheD -about "Apache (Web Server)D" apacheC
-sf cx apacheD
-sf ll s -name apacheE -about "Apache (Web Server)E"
-sf rm w
+sf init
+sf a d /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
+sf a f docker-local
+sf a s -frame docker-local apache
+sf ll f -name docker-localA -about "Deploy containers on local Docker EngineA" docker-local
+sf ll s -frame docker-localA -name apacheA -about "Apache (Web Server)A" apache
+sf ll f -name docker-localB -about "Deploy containers on local Docker EngineB" docker-localA
+sf ll s -frame docker-localB -name apacheB -about "Apache (Web Server)B" apacheA
+sf cx docker-localB
+sf ll f -name docker-localC -about "Deploy containers on local Docker EngineC"
+sf ll s -name apacheC -about "Apache (Web Server)C" apacheB
+sf cx apacheC
+sf ll s -name apacheD -about "Apache (Web Server)D"
+sf g f
+sf g s 
+nuke
 
 t Orchestrating
-sf a w -about "Workspace One" W1 
-sf a d -workspace W1 /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
-sf a f -workspace W1 docker-local
-sf a s -workspace W1 -frame docker-local apache
-sf cg f -workspace W1 -frame docker-local "$frame_config_yaml"
-sf cg s -workspace W1 -frame docker-local -shape apache "$shape_config_yaml"
-sf cg f-s -workspace W1 -frame docker-local -shape apache "$frame_shape_config_yaml"
-sf o -workspace W1 -frame docker-local
-sf cx W1
+sf init
+sf a d /home/lachlan/Documents/play/go/sf-repos/shapeframe-apps
+sf a f docker-local
+sf a s -frame docker-local apache
+sf cg f -frame docker-local "$frame_config_yaml"
+sf cg s -frame docker-local -shape apache "$shape_config_yaml"
+sf cg s-f -frame docker-local -shape apache "$frameshape_config_yaml"
 sf o -frame docker-local
 sf cx docker-local
 sf o
 
 t Helping
 sf -help
+sf initialize -help
 sf list -help
-sf ls workspaces -help
 sf ls frames -help
 sf ls shapes -help
 sf ls framers -help
@@ -277,18 +246,15 @@ sf inspect -help
 sf add -help
 sf a shape -help
 sf a frame -help
-sf a workspace -help
 sf a repository -help
 sf a directory -help
 sf remove -help
 sf rm shape -help
 sf rm frame -help
-sf rm workspace -help
 sf rm repository -help
 sf rm directory -help
 sf pull -help
 sf context -help
 sf orchestrate -help
-sf nuke -help
 
 report

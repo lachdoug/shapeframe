@@ -11,14 +11,13 @@ import (
 
 type FramesDelete struct {
 	Body    *Body
-	WID     string
 	ID      string
 	Cancel  *tuisupport.Button
 	Confirm *tuisupport.Button
 }
 
-func newFramesDelete(b *Body, wid string, id string) (fd *FramesDelete) {
-	fd = &FramesDelete{Body: b, WID: wid, ID: id}
+func newFramesDelete(b *Body, id string) (fd *FramesDelete) {
+	fd = &FramesDelete{Body: b, ID: id}
 	return
 }
 
@@ -42,8 +41,7 @@ func (fd *FramesDelete) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 func (fd *FramesDelete) View() (v string) {
 	style := lipgloss.NewStyle().Padding(1)
 	idStyle := lipgloss.NewStyle().Bold(true)
-	id := fmt.Sprintf("%s.%s", fd.WID, fd.ID)
-	msg := style.Render(fmt.Sprintf("Delete frame %s?", idStyle.Render(id)))
+	msg := style.Render(fmt.Sprintf("Delete frame %s?", idStyle.Render(fd.ID)))
 	v = lipgloss.JoinVertical(lipgloss.Left,
 		msg,
 		lipgloss.JoinHorizontal(lipgloss.Top,
@@ -75,21 +73,22 @@ func (fd *FramesDelete) setCancel() {
 }
 
 func (fd *FramesDelete) confirm() (c tea.Cmd) {
-	result := fd.Body.call(
+	result := &controllers.Result{}
+	result, c = fd.Body.App.call(
 		controllers.FramesDelete,
 		&controllers.FramesDeleteParams{
 			Frame: fd.ID,
 		},
-		"../..",
+		tuisupport.Open(".."),
 	)
 	if result != nil {
-		c = Open("../..")
+		c = tuisupport.Open("../..")
 	}
 	return
 }
 
 func (fd *FramesDelete) cancel() (c tea.Cmd) {
-	c = Open("..")
+	c = tuisupport.Open("..")
 	return
 }
 
@@ -98,6 +97,11 @@ func (fd *FramesDelete) focusChain() (fc []tuisupport.Focuser) {
 		fd.Cancel,
 		fd.Confirm,
 	}
+	return
+}
+
+func (fd *FramesDelete) isFocus() (is bool) {
+	is = fd.Cancel.IsFocus || fd.Confirm.IsFocus
 	return
 }
 

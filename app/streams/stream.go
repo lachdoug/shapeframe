@@ -1,12 +1,18 @@
 package streams
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
+	fileio "io"
+	"os"
 	"path/filepath"
+	"sf/app/dirs"
 	"sf/app/errors"
 	"sf/app/io"
 	"sf/utils"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -41,7 +47,7 @@ func (st *Stream) setFile() {
 // Location
 
 func (st *Stream) directory() (d string) {
-	d = utils.TempDir(filepath.Join("streams", st.Identifier))
+	d = dirs.TempDir(filepath.Join("streams", st.Identifier))
 	return
 }
 
@@ -89,7 +95,6 @@ func (st *Stream) Close() {
 
 func (st *Stream) Heading(format string, a ...any) {
 	st.Writef(io.LightYellowColor+format+io.ResetText+"\n", a...)
-
 }
 
 func (st *Stream) SubHeading(format string, a ...any) {
@@ -108,6 +113,11 @@ func (st *Stream) ScriptSuccess(isOutput bool) {
 	st.Writeln(io.GrayColor + "╰ success" + suffix + io.ResetText)
 }
 
+func (st *Stream) ScriptError(err error) {
+	st.Writeln(io.RedColor + err.Error())
+	st.Writeln(io.GrayColor + "╰ failed" + io.ResetText)
+}
+
 func (st *Stream) ScriptMissing() {
 	st.Writeln(io.GrayColor + "╰ does not exist" + io.ResetText)
 }
@@ -123,12 +133,13 @@ func (st *Stream) Print() (err error) {
 
 func (st *Stream) Read(out func(...any)) (err error) {
 	ch := make(chan []byte)
-	go utils.TailFile(st.File, ch)
+	go st.tailFile(ch)
 	for b := range ch {
 		m := &Message{}
 		utils.JsonUnmarshal(b, m)
 		if m.Type == "error" {
 			err = errors.Error(m.Text)
+			st.Complete = true
 			return
 		} else {
 			out(m.Text)
@@ -136,6 +147,40 @@ func (st *Stream) Read(out func(...any)) (err error) {
 	}
 	st.Complete = true
 	return
+}
+
+func (st *Stream) tailFile(ch chan []byte) {
+	var f *os.File
+	var err error
+
+	if f, err = os.Open(st.File); err != nil {
+		panic(err)
+	}
+
+	defer func() {
+		if err = f.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	r := bufio.NewReader(f)
+
+	for {
+		b, err := r.ReadBytes(27)
+		if err != nil {
+			if err == fileio.EOF {
+				time.Sleep(100 * time.Millisecond)
+			} else {
+				break
+			}
+		}
+		if bytes.Equal(b, []byte{4}) { // Check for EOT
+			break
+		} else if !bytes.Equal(b, []byte{}) { // Skip empty bytes
+			ch <- bytes.Trim(b, string([]byte{27}))
+		}
+	}
+	close(ch)
 }
 
 // Saving

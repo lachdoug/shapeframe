@@ -9,7 +9,7 @@ func configure() (commandset any) {
 		Summary: "Configure a shape, frame or workspace",
 		Commands: cs(
 			configureShape,
-			configureFrameShape,
+			configureShapeFrame,
 			configureFrame,
 			// configureWorkspace,
 		),

@@ -2,6 +2,7 @@ package models
 
 import (
 	"path/filepath"
+	"sf/app/dirs"
 	"sf/app/scripts"
 	"sf/app/streams"
 	"sf/utils"
@@ -26,9 +27,7 @@ func NewComposition(f *Frame, st *streams.Stream) (cn *Composition) {
 // Location
 
 func (cn *Composition) setPath() {
-	cn.Path = utils.DataDir(filepath.Join(
-		"workspaces",
-		cn.Frame.Workspace.Name,
+	cn.Path = dirs.WorkspaceDir(filepath.Join(
 		"composition",
 		cn.Frame.Name,
 	))
@@ -220,6 +219,7 @@ func (cn *Composition) Exec(filePath string) (err error) {
 	var isOutput bool
 	if utils.IsFile(filePath) {
 		if isOutput, err = scripts.Exec(filePath, cn.Stream); err != nil {
+			cn.Stream.ScriptError(err)
 			return
 		}
 		cn.Stream.ScriptSuccess(isOutput)

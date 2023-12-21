@@ -11,13 +11,8 @@ func removeRepository() (command any) {
 		Summary: "Remove a repository from a workspace",
 		Aliases: ss("r"),
 		Usage: ss(
-			"sf remove repository [options] [URI]",
+			"sf remove repository [options] URI",
 			"A repository URI must be provided as an argument",
-			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
-		),
-		Flags: ss(
-			"string", "workspace", "Name of the workspace",
 		),
 		Handler:    removeRepositoryHandler,
 		Controller: controllers.RepositoriesDelete,
@@ -29,8 +24,7 @@ func removeRepository() (command any) {
 func removeRepositoryHandler(context *cliapp.Context) (params *controllers.Params, err error) {
 	params = &controllers.Params{
 		Payload: &controllers.RepositoriesDeleteParams{
-			URI:       context.Argument(0),
-			Workspace: context.StringFlag("workspace"),
+			URI: context.Argument(0),
 		},
 	}
 	return

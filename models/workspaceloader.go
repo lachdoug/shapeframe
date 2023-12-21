@@ -75,10 +75,8 @@ func (wl *WorkspaceLoader) settle() {
 }
 
 func (wl *WorkspaceLoader) query() {
-	if len(wl.Preloads) > 0 {
-		utils.UniqStrings(&wl.Preloads)
-		queries.Load(wl.Workspace, wl.Workspace.ID, wl.Preloads...)
-	}
+	utils.UniqStrings(&wl.Preloads)
+	queries.Load(wl.Workspace, 1, wl.Preloads...)
 }
 
 func (wl *WorkspaceLoader) assign() (err error) {
@@ -173,7 +171,7 @@ func (wl *WorkspaceLoader) setRepositories() (err error) {
 }
 
 func (wl *WorkspaceLoader) repositoryURIs() (dirPaths []string, err error) {
-	if dirPaths, err = utils.GitURIs(filepath.Join(wl.Workspace.directory(), "repos")); err != nil {
+	if dirPaths, err = utils.GitURIs(filepath.Join(wl.Workspace.Directory(), "repos")); err != nil {
 		err = errors.ErrorWrap(err, "repository URIs")
 		return
 	}

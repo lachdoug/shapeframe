@@ -14,8 +14,6 @@ func labelShape() (command any) {
 			"sf label shape [options] [name]",
 			"Provide an optional shape name as an argument",
 			"  Uses shape context when not provided",
-			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
 			"Provide an optional frame name using the -frame flag",
 			"  Is required if -workspace flag is set",
 			"  Uses workspace context when not provided",
@@ -23,7 +21,6 @@ func labelShape() (command any) {
 			"Provide an optional shape update about using the -about flag",
 		),
 		Flags: ss(
-			"string", "workspace", "Name of the workspace",
 			"string", "frame", "Name of the frame",
 			"string", "name", "New name for the shape",
 			"string", "about", "New about for the shape",
@@ -36,7 +33,7 @@ func labelShape() (command any) {
 }
 
 func labelShapeHandler(context *cliapp.Context) (params *controllers.Params, err error) {
-	updates := map[string]any{}
+	updates := map[string]string{}
 	if context.IsSet("name") {
 		updates["Name"] = context.StringFlag("name")
 	}
@@ -46,10 +43,9 @@ func labelShapeHandler(context *cliapp.Context) (params *controllers.Params, err
 
 	params = &controllers.Params{
 		Payload: &controllers.ShapesUpdateParams{
-			Workspace: context.StringFlag("workspace"),
-			Frame:     context.StringFlag("frame"),
-			Shape:     context.Argument(0),
-			Updates:   updates,
+			Frame:   context.StringFlag("frame"),
+			Shape:   context.Argument(0),
+			Updates: updates,
 		},
 	}
 	return

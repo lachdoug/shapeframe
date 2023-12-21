@@ -18,7 +18,7 @@ func GitPull(dirPath string, username string, password string, st *streams.Strea
 			Password: password,
 		},
 		RemoteName: "origin",
-		// Depth:      1,
+		// Depth:      1, https://github.com/go-git/go-git/issues/305
 		Progress: st.Writer,
 	}
 	if gr, err = git.PlainOpen(dirPath); err != nil {

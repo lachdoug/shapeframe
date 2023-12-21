@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"sf/app/logs"
 	"sf/models"
 	"sf/tui/tuisupport"
 
@@ -20,11 +21,10 @@ type Form struct {
 	SubmitCallback  func(map[string]string) tea.Cmd
 	CancelCallback  func() tea.Cmd
 	Components      []Componenter
-	// FocusIndex      int
-	Width    int
-	Validity string
-	IsActive bool
-	// Cancelled  bool
+	PageWidth       int
+	Width           int
+	Validity        string
+	IsActive        bool
 }
 
 func NewForm(
@@ -53,18 +53,18 @@ func (fm *Form) setAnswers() {
 }
 
 func (fm *Form) setComponents() {
-	for _, fmcm := range fm.ComponentModels {
-		fm.Components = append(fm.Components, fm.newControl(fm, fmcm))
+	for _, model := range fm.ComponentModels {
+		fm.Components = append(fm.Components, fm.newControl(model))
 	}
 	fm.Components = append(fm.Components, newButtons(fm))
 }
 
-func (fm *Form) newControl(pt Parenter, fmcm *models.FormComponent) (c Componenter) {
-	switch fmcm.Type {
+func (fm *Form) newControl(model *models.FormComponent) (c Componenter) {
+	switch model.Type {
 	case "row":
-		c = NewRow(fm, pt, fmcm)
+		c = NewRow(fm, model)
 	default:
-		c = NewField(fm, pt, fmcm)
+		c = NewField(fm, model)
 	}
 	return
 }
@@ -102,41 +102,53 @@ func (fm *Form) updateComponents(msg tea.Msg) (c tea.Cmd) {
 
 func (fm *Form) View() (v string) {
 	headingStyle := lipgloss.NewStyle().
-		Bold(true)
+		Bold(true).
+		Padding(1)
+
+	padding := int(math.Round(float64((fm.PageWidth - fm.Width) / 2)))
+	componentStyle := lipgloss.NewStyle().
+		PaddingLeft(padding)
 
 	lines := []string{headingStyle.Render(fm.Title)}
 	for _, fmc := range fm.Components {
-		lines = append(lines, fmc.View())
+		lines = append(lines, componentStyle.Render(fmc.View()))
 	}
 	lines = slices.DeleteFunc(lines, func(s string) bool { return s == "" })
 	v = lipgloss.JoinVertical(lipgloss.Left, lines...)
 	return
 }
 
-func (fm *Form) set(k string, v string) {
+func (fm *Form) setAnswer(k string, v string) {
+	logs.Print("setanswer k,v", k, v)
 	fm.Answers[k] = v
-	fm.depend()
-}
-
-func (fm *Form) width() (w int) {
-	w = fm.Width
-	return
-}
-
-func (fm *Form) SetSize(w int, h int) {
-	x := int(math.Mod(float64(w), 12))
-	fm.Width = w - x
-	for _, fmc := range fm.Components {
-		fmc.resize()
+	if fm.IsActive {
+		fm.depend()
 	}
 }
 
-// func (fm *Form) enter() (c tea.Cmd) { return nil }
+func (fm *Form) SetWidth(w int) {
+	fm.PageWidth = w
+	x := int(math.Mod(float64(w), 12))
+	fm.Width = w - x
+	for _, fmc := range fm.Components {
+		fmc.setWidth(fm.Width)
+	}
+}
 
 func (fm *Form) FocusChain() (fc []tuisupport.Focuser) {
 	fc = []tuisupport.Focuser{}
 	for _, fmc := range fm.Components {
 		fc = append(fc, fmc.FocusChain()...)
+	}
+	return
+}
+
+func (fm *Form) IsFocus() (is bool) {
+	for _, fmc := range fm.Components {
+		if fmc.isFocus() {
+			is = true
+			return
+		}
 	}
 	return
 }
@@ -158,8 +170,6 @@ func (fm *Form) depend() {
 		fmc.depend()
 	}
 }
-
-// func (fm *Form) value() string { return "" }
 
 func (fm *Form) validity() (vy string) {
 	vy = ""

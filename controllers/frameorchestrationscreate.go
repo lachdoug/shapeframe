@@ -6,8 +6,7 @@ import (
 )
 
 type FrameOrchestrationsCreateParams struct {
-	Workspace string
-	Frame     string
+	Frame string
 }
 
 type FrameOrchestrationsCreateResult struct {
@@ -21,15 +20,12 @@ func FrameOrchestrationsCreate(params *Params) (result *Result, err error) {
 	p := params.Payload.(*FrameOrchestrationsCreateParams)
 	st := streams.StreamCreate()
 
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace", "Frame",
-	)
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
-		"Frames",
+	if w, err = models.ResolveWorkspace(
+		"Frames", "Frame",
 	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, p.Frame,
+	if f, err = models.ResolveFrame(w, p.Frame,
 		"Configuration", "Shapes.Configuration",
 	); err != nil {
 		return

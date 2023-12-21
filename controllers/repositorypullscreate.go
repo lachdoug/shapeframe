@@ -6,10 +6,9 @@ import (
 )
 
 type RepositoryPullsCreateParams struct {
-	Workspace string
-	URI       string
-	Username  string
-	Password  string
+	URI      string
+	Username string
+	Password string
 }
 
 type RepositoryPullsCreateResult struct {
@@ -25,8 +24,7 @@ func RepositoryPullsCreate(params *Params) (result *Result, err error) {
 	p := params.Payload.(*RepositoryPullsCreateParams)
 	st := streams.StreamCreate()
 
-	uc := models.ResolveUserContext("Workspaces", "Workspace")
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
+	if w, err = models.ResolveWorkspace(
 		"Repositories",
 	); err != nil {
 		return

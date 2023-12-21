@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"sf/app/logs"
 	"sf/utils"
 	"strings"
 )
@@ -52,36 +51,20 @@ func (t *Table) row(item map[string]any, rowValues []string, lengths []int) (row
 
 func (t *Table) cell(item map[string]any, i int, value string, length int) (cell string) {
 	format := fmt.Sprintf("%%-%ds", length)
-	// if len(value) > length {
-	// 	value = utils.TruncateString(value, length)
-	// }
 	cell = t.Accents[i](fmt.Sprintf(format, value), item)
 	return
 }
 
 func (t *Table) lengths(tableValues [][]string) (lengths []int) {
-	// terminalWidth, _ := utils.TerminalSize()
 	columnValues := []string{}
-	// occupiedChars := 0
 	for i := range t.Keys {
 		title := t.Titles[i]
 		for j := range t.Items {
 			columnValues = append(columnValues, tableValues[j][i])
 		}
 		length := t.longest(title, columnValues)
-		// if i < len(t.Keys)-1 && length > 25 {
-		// 	length = 25
-		// }
-		// if length > terminalWidth-occupiedChars-1 || i == len(t.Keys)-1 {
-		// 	length = terminalWidth - occupiedChars - 1
-		// }
-		// if length < 0 {
-		// 	length = 0
-		// }
-		// occupiedChars = occupiedChars + length + 1
 		lengths = append(lengths, length)
 	}
-	logs.Log("TABLE LENGTHS", lengths)
 	return
 }
 

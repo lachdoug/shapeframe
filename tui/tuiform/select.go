@@ -1,50 +1,47 @@
 package tuiform
 
 import (
-	"strings"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 type Select struct {
-	Form      *Form
-	Field     *Field
-	Items     []*Option
-	Selection int
-	Width     int
+	Field   *Field
+	Options []*Option
 }
 
-func NewSelect(fm *Form, f *Field) (s *Select) {
-	s = &Select{Form: fm, Field: f}
+func NewSelect(f *Field) (s *Select) {
+	s = &Select{Field: f}
 	return
 }
 
-func (s *Select) setWidth() {
-	s.Width = s.Field.Width
-}
-
-func (s *Select) setItems() {
-	items := []*Option{}
-	for _, opt := range s.Field.ComponentModel.Options {
-		items = append(items, NewOption(opt))
+func (s *Select) setOptions() {
+	options := []*Option{}
+	for _, model := range s.Field.Model.Options {
+		options = append(options, NewOption(s.Field, model))
 	}
-	s.Items = items
+	s.Options = options
 }
 
 func (s *Select) setSelection() {
-	an := s.Form.Answers[s.Field.ComponentModel.Key]
-	for i, item := range s.Field.ComponentModel.Options {
-		if an == item.Value {
-			s.Selection = i
-			return
+	an := s.Field.answer()
+	isSelected := false
+	for _, opt := range s.Options {
+		if an == opt.Model.Value {
+			isSelected = true
+			opt.IsFocus = true
+			opt.IsSelected = true
 		}
+	}
+	if !isSelected {
+		opt := s.Options[0]
+		opt.IsFocus = true
+		opt.IsSelected = true
 	}
 }
 
 func (s *Select) Init() (c tea.Cmd) {
-	s.setWidth()
-	s.setItems()
+	s.setOptions()
 	s.setSelection()
 	return
 }
@@ -52,112 +49,136 @@ func (s *Select) Init() (c tea.Cmd) {
 func (s *Select) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 	m = s
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.MouseMsg:
 		switch msg.Type {
-		case tea.KeyEnter, tea.KeySpace:
-			c = s.enter()
-			return
-		// case tea.KeyTab:
-		// 	c = s.next()
-		// 	return
-		// case tea.KeyShiftTab:
-		// 	c = s.previous()
-		// 	return
-		case tea.KeyDown:
-			s.down()
-			return
-		case tea.KeyUp:
-			s.up()
-			return
+		case tea.MouseMotion:
+			for _, opt := range s.Options {
+				if s.Field.IsFocus && opt.inBounds(msg) {
+					opt.IsHover = true
+				} else {
+					opt.IsHover = false
+				}
+			}
+		case tea.MouseLeft:
+			if s.Field.IsHover {
+				for _, opt := range s.Options {
+					if opt.IsHover {
+						opt.IsFocus = true
+						opt.IsSelected = true
+					} else {
+						opt.IsFocus = false
+						opt.IsSelected = false
+					}
+				}
+				s.setAnswer()
+			}
 		}
-	case error:
-		panic(msg)
+	case tea.KeyMsg:
+		if s.Field.IsFocus {
+			switch msg.Type {
+			case tea.KeyEnter:
+				for _, opt := range s.Options {
+					if opt.IsFocus {
+						opt.IsSelected = true
+					} else {
+						opt.IsSelected = false
+					}
+				}
+				s.setAnswer()
+				c = s.Field.enter()
+			case tea.KeyDown:
+				s.down()
+				s.setAnswer()
+			case tea.KeyUp:
+				s.up()
+				s.setAnswer()
+			}
+		}
 	}
 	return
 }
 
 func (s *Select) View() (v string) {
-	borderStyle := lipgloss.NewStyle().
-		BorderStyle(lipgloss.RoundedBorder()).
-		Width(s.Width - 2)
+	vs := []string{}
 	if s.Field.IsFocus {
-		borderStyle.BorderForeground(lipgloss.Color("15"))
+		for _, opt := range s.Options {
+			vs = append(vs, opt.View())
+		}
 	} else {
-		borderStyle.BorderForeground(lipgloss.Color("8"))
+		for _, opt := range s.Options {
+			if opt.IsSelected {
+				vs = append(vs, opt.Model.Label)
+			}
+		}
+
 	}
-
-	v = borderStyle.Render(s.body())
+	v = lipgloss.JoinVertical(lipgloss.Left, vs...)
 	return
 }
 
-func (s *Select) body() (f string) {
-	if !s.Field.IsFocus {
-		f = s.Items[s.Selection].View(false, "")
-		return
+func (s *Select) setAnswer() {
+	s.Field.setAnswer(s.value())
+}
+
+func (s *Select) focus(aspect string) (c tea.Cmd) {
+	for _, opt := range s.Options {
+		if opt.IsSelected {
+			opt.IsFocus = true
+		} else {
+			opt.IsFocus = false
+		}
 	}
-	lines := []string{}
-	for i, it := range s.Items {
-		lines = append(lines, it.View(i == s.Selection, "⮞"))
+	return
+}
+
+func (s *Select) blur() {
+	for _, opt := range s.Options {
+		opt.IsFocus = false
 	}
-	f = strings.Join(lines, "\n")
-	return
 }
-
-func (s *Select) answer() {
-	s.Field.set(s.Field.ComponentModel.Key, s.value())
-}
-
-func (s *Select) width() (w int) {
-	w = s.Width
-	return
-}
-
-func (s *Select) resize() {
-	s.setWidth()
-}
-
-func (s *Select) enter() (c tea.Cmd) {
-	c = s.Field.enter()
-	return
-}
-
-// func (s *Select) next() (c tea.Cmd) {
-// 	c = s.Field.next()
-// 	return
-// }
-
-// func (s *Select) previous() (c tea.Cmd) {
-// 	c = s.Field.previous()
-// 	return
-// }
-
-func (s *Select) focus() tea.Cmd { return nil }
-func (s *Select) blur()          {}
-
-// func (s *Select) depend()            {}
-func (s *Select) set(string, string) {}
 
 func (s *Select) value() (v string) {
-	v = s.Items[s.Selection].Value
+	for _, opt := range s.Options {
+		if opt.IsSelected {
+			v = opt.Model.Value
+			return
+		}
+	}
 	return
 }
 
-// func (s *Select) validity() string { return "" }
-
 func (s *Select) up() {
-	s.Selection--
-	if s.Selection == -1 {
-		s.Selection++
+	index := 0
+	for i, opt := range s.Options {
+		if opt.IsSelected {
+			index = i
+		}
+		opt.IsFocus = false
+		opt.IsSelected = false
 	}
-	s.answer()
+	index = index - 1
+	if index == -1 {
+		index = 0
+	}
+	opt := s.Options[index]
+	opt.IsFocus = true
+	opt.IsSelected = true
 }
 
 func (s *Select) down() {
-	s.Selection++
-	if s.Selection == len(s.Items) {
-		s.Selection--
+	index := 0
+	for i, opt := range s.Options {
+		if opt.IsSelected {
+			index = i
+		}
+		opt.IsFocus = false
+		opt.IsSelected = false
 	}
-	s.answer()
+	index = index + 1
+	if index == len(s.Options) {
+		index = index - 1
+	}
+	opt := s.Options[index]
+	opt.IsFocus = true
+	opt.IsSelected = true
 }
-
-// func (s *Select) shown() []string { return nil }

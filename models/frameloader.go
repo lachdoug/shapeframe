@@ -120,19 +120,16 @@ func (fl *FrameLoader) loadFramer() (err error) {
 
 func (fl *FrameLoader) loadConfiguration() (err error) {
 	if fl.Configuration {
-		if err = fl.setConfiguration(); err != nil {
-			return
-		}
+		fl.setConfiguration()
 		err = fl.Frame.Configuration.load(fl.ConfigurationLoads...)
 	}
 	return
 }
 
-func (fl *FrameLoader) setConfiguration() (err error) {
+func (fl *FrameLoader) setConfiguration() {
 	c := NewConfiguration(fl.Frame.ID, "frame", "frame", fl.Frame.Framer.Frame)
 	queries.Lookup(c)
 	fl.Frame.Configuration = c
-	return
 }
 
 func (fl *FrameLoader) SetFramer() (err error) {

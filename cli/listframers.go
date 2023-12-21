@@ -12,23 +12,9 @@ func listFramers() (command any) {
 		Aliases: ss("fr"),
 		Usage: ss(
 			"sf list framers [options]",
-			"Provide an optional workspace name using the -workspace flag",
 		),
-		Flags: ss(
-			"string", "workspace", "Workspace name",
-		),
-		Handler:    listFramersHandler,
 		Controller: controllers.FramersIndex,
 		Viewer:     listFramersViewer,
-	}
-	return
-}
-
-func listFramersHandler(context *cliapp.Context) (params *controllers.Params, err error) {
-	params = &controllers.Params{
-		Payload: &controllers.FramersIndexParams{
-			Workspace: context.StringFlag("workspace"),
-		},
 	}
 	return
 }

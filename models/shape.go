@@ -13,36 +13,33 @@ import (
 )
 
 type Shape struct {
-	ID                      uint `gorm:"primaryKey"`
-	CreatedAt               time.Time
-	UpdatedAt               time.Time
-	DeletedAt               soft_delete.DeletedAt `gorm:"softDelete:nano;index:idx_nondeleted_frame_shape,unique"`
-	FrameID                 uint                  `gorm:"index:idx_nondeleted_frame_shape,unique"`
-	Frame                   *Frame                `gorm:"foreignkey:FrameID"`
-	Name                    string                `gorm:"index:idx_nondeleted_frame_shape,unique"`
-	About                   string
-	ShaperName              string
-	ShapeConfiguration      *Configuration `gorm:"-"`
-	FrameShapeConfiguration *Configuration `gorm:"-"`
-	Shaper                  *Shaper        `gorm:"-"`
+	ID                 uint `gorm:"primaryKey"`
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	DeletedAt          soft_delete.DeletedAt `gorm:"softDelete:nano;index:idx_nondeleted_frame_shape,unique"`
+	FrameID            uint                  `gorm:"index:idx_nondeleted_frame_shape,unique"`
+	Frame              *Frame                `gorm:"foreignkey:FrameID"`
+	Name               string                `gorm:"index:idx_nondeleted_frame_shape,unique"`
+	About              string
+	ShaperName         string
+	ShapeConfiguration *ShapeConfiguration `gorm:"-"`
+	Shaper             *Shaper             `gorm:"-"`
 }
 
 type ShapeReader struct {
-	Name               string
-	About              string
-	Workspace          string
-	Frame              string
-	Shaper             string
-	ShapeSettings      []map[string]string
-	FrameShapeSettings []map[string]string
+	Name          string
+	About         string
+	Workspace     string
+	Frame         string
+	Shaper        string
+	Configuration *ShapeConfiguration
 }
 
 type ShapeInspector struct {
-	Name               string
-	About              string
-	Shaper             string
-	ShapeSettings      []map[string]string
-	FrameShapeSettings []map[string]string
+	Name          string
+	About         string
+	Shaper        string
+	Configuration *ShapeConfigurationInspector
 }
 
 type ShapeOutput struct {
@@ -51,7 +48,7 @@ type ShapeOutput struct {
 	Frame      string
 	Name       string
 	About      string
-	Config     *ShapeOutputConfigSettings
+	Settings   *ShapeOutputSettings
 	Build      *ShapeOutputBuild
 	Start      []string
 	Ports      [][]string
@@ -63,9 +60,9 @@ type ShapeOutputBuild struct {
 	Do [][]string
 }
 
-type ShapeOutputConfigSettings struct {
-	Shape      map[string]string
-	FrameShape map[string]string `yaml:"frame-shape"`
+type ShapeOutputSettings struct {
+	Shape map[string]string
+	Frame map[string]string
 }
 
 // Construction
@@ -81,20 +78,21 @@ func NewShape(f *Frame, name string) (s *Shape) {
 func CreateShape(f *Frame, shaper string, name string, about string) (s *Shape, vn *validations.Validation, err error) {
 	s = NewShape(f, name)
 	s.ShaperName = shaper
+	s.About = about
 	if vn = s.ShaperValidation(); vn.IsInvalid() {
 		return
 	}
 	if err = s.Load("Shaper"); err != nil {
 		return
 	}
-	if name == "" {
+	if s.Name == "" {
 		s.Name = s.Shaper.Name
 	}
-	if about == "" {
+	if s.About == "" {
 		s.About = s.Shaper.About
 	}
 	if s.IsExists() {
-		err = errors.Errorf("shape %s already exists in frame %s workspace %s", name, f.Name, f.Workspace.Name)
+		err = errors.Errorf("shape %s already exists in frame %s", s.Name, f.Name)
 		return
 	}
 	if vn = s.Validation(); vn.IsValid() {
@@ -103,13 +101,13 @@ func CreateShape(f *Frame, shaper string, name string, about string) (s *Shape, 
 	return
 }
 
-func ResolveShape(uc *UserContext, f *Frame, name string, loads ...string) (s *Shape, err error) {
+func ResolveShape(w *Workspace, f *Frame, name string, loads ...string) (s *Shape, err error) {
 	if name == "" {
-		if uc == nil {
-			err = errors.Error("no user context")
+		if w == nil {
+			err = errors.Error("no workspaces")
 			return
 		}
-		s = uc.Shape
+		s = w.Shape
 		if s == nil {
 			err = errors.Error("no shape context")
 			return
@@ -153,11 +151,10 @@ func (s *Shape) identifier() (iden string) {
 
 func (s *Shape) Inspect() (si *ShapeInspector) {
 	si = &ShapeInspector{
-		Name:               s.Name,
-		About:              s.About,
-		Shaper:             s.ShaperName,
-		ShapeSettings:      s.ShapeConfiguration.Info(),
-		FrameShapeSettings: s.FrameShapeConfiguration.Info(),
+		Name:          s.Name,
+		About:         s.About,
+		Shaper:        s.ShaperName,
+		Configuration: s.ShapeConfiguration.Inspect(),
 	}
 	return
 }
@@ -166,13 +163,12 @@ func (s *Shape) Inspect() (si *ShapeInspector) {
 
 func (s *Shape) Read() (sr *ShapeReader) {
 	sr = &ShapeReader{
-		Name:               s.Name,
-		About:              s.About,
-		Workspace:          s.Frame.Workspace.Name,
-		Frame:              s.Frame.Name,
-		Shaper:             s.ShaperName,
-		ShapeSettings:      s.ShapeConfiguration.Info(),
-		FrameShapeSettings: s.FrameShapeConfiguration.Info(),
+		Name:          s.Name,
+		About:         s.About,
+		Workspace:     s.Frame.Workspace.Name,
+		Frame:         s.Frame.Name,
+		Shaper:        s.ShaperName,
+		Configuration: s.ShapeConfiguration,
 	}
 	return
 }
@@ -193,12 +189,12 @@ func (s *Shape) Load(loads ...string) (err error) {
 	return
 }
 
-func (s *Shape) Assign(params map[string]any) {
-	if params["Name"] != nil {
-		s.Name = params["Name"].(string)
+func (s *Shape) Assign(params map[string]string) {
+	if params["Name"] != "" {
+		s.Name = params["Name"]
 	}
-	if params["About"] != nil {
-		s.About = params["About"].(string)
+	if params["About"] != "" {
+		s.About = params["About"]
 	}
 }
 
@@ -221,7 +217,7 @@ func (s *Shape) Validation() (vn *validations.Validation) {
 	return
 }
 
-func (s *Shape) Update(updates map[string]any) (vn *validations.Validation) {
+func (s *Shape) Update(updates map[string]string) (vn *validations.Validation) {
 	s.Assign(updates)
 	if vn = s.Validation(); vn.IsValid() {
 		s.Save()
@@ -248,9 +244,9 @@ func (s *Shape) Output() (o *ShapeOutput) {
 		Frame:      s.Frame.Name,
 		Name:       s.Name,
 		About:      s.About,
-		Config: &ShapeOutputConfigSettings{
-			Shape:      s.ShapeConfiguration.Settings,
-			FrameShape: s.FrameShapeConfiguration.Settings,
+		Settings: &ShapeOutputSettings{
+			Shape: s.ShapeConfiguration.Shape.Settings,
+			Frame: s.ShapeConfiguration.Frame.Settings,
 		},
 		Start:   s.Shaper.Start,
 		Ports:   s.Shaper.Ports,

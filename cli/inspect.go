@@ -11,11 +11,8 @@ func inspect() (command any) {
 		Aliases: ss("i"),
 		Summary: "Inspect workspace",
 		Usage: ss(
-			"sf inspect workspace [options] [name]",
-			"Provide an optional workspace name as an argument",
-			"  Uses workspace context when not provided",
+			"sf inspect [options]",
 		),
-		Handler:    inspectHandler,
 		Controller: controllers.WorkspaceInspectsRead,
 		Viewer: cliapp.View(
 			"workspaceinspects/read",
@@ -32,7 +29,8 @@ func inspect() (command any) {
 			"workspaceinspects/directories",
 			"workspaceinspects/directory",
 			"configurations/configuration",
-			"configurations/datum",
+			"configurations/settings",
+			"configurations/setting",
 			"gitrepos/gitrepo",
 			"gitrepos/branches",
 			"gitrepos/framers",
@@ -40,15 +38,6 @@ func inspect() (command any) {
 			"gitrepos/shapers",
 			"gitrepos/shaper",
 		),
-	}
-	return
-}
-
-func inspectHandler(context *cliapp.Context) (params *controllers.Params, err error) {
-	params = &controllers.Params{
-		Payload: &controllers.WorkspaceInspectsReadParams{
-			Workspace: context.Argument(0),
-		},
 	}
 	return
 }

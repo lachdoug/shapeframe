@@ -12,6 +12,5 @@ type Componenter interface {
 	View() string
 	setSize(int, int)
 	focusChain() []tuisupport.Focuser
-	// focus() tea.Cmd
-	// blur()
+	isFocus() bool
 }

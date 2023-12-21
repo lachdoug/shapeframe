@@ -2,30 +2,29 @@ package models
 
 import (
 	"path/filepath"
+	"sf/app/dirs"
 	"sf/app/errors"
 	"sf/app/validations"
 	"sf/database/queries"
 	"sf/utils"
 	"strings"
-	"time"
 
-	"gorm.io/plugin/soft_delete"
+	"gorm.io/gorm"
 )
 
 type Workspace struct {
-	ID            uint `gorm:"primaryKey"`
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-	DeletedAt     soft_delete.DeletedAt `gorm:"softDelete:nano;index:idx_nondeleted_usercontext_workspace,unique"`
-	UserContextID uint                  `gorm:"index:idx_nondeleted_usercontext_workspace,unique"`
-	UserContext   *UserContext          `gorm:"foreignkey:UserContextID"`
-	Name          string                `gorm:"index:idx_nondeleted_usercontext_workspace,unique"`
-	About         string
-	Frames        []*Frame
-	Directories   []*Directory
-	Repositories  []*Repository `gorm:"-"`
-	Framers       []*Framer     `gorm:"-"`
-	Shapers       []*Shaper     `gorm:"-"`
+	gorm.Model
+	Name         string `gorm:"index:idx_nondeleted_usercontext_workspace,unique"`
+	About        string
+	FrameID      uint
+	ShapeID      uint
+	Frame        *Frame `gorm:"foreignkey:FrameID"`
+	Shape        *Shape `gorm:"foreignkey:ShapeID"`
+	Frames       []*Frame
+	Directories  []*Directory
+	Repositories []*Repository `gorm:"-"`
+	Framers      []*Framer     `gorm:"-"`
+	Shapers      []*Shaper     `gorm:"-"`
 }
 
 type WorkspaceReader struct {
@@ -46,53 +45,37 @@ type WorkspaceInspector struct {
 
 // Construction
 
-func NewWorkspace(uc *UserContext, name string) (w *Workspace) {
-	w = &Workspace{
-		UserContext: uc,
-		Name:        name,
-	}
+func NewWorkspace() (w *Workspace) {
+	w = &Workspace{}
 	return
 }
 
-func CreateWorkspace(uc *UserContext, name string, about string) (w *Workspace, vn *validations.Validation, err error) {
-	w = NewWorkspace(uc, name)
-	w.About = about
-	if w.IsExists() {
-		err = errors.Errorf("workspace %s already exists", w.Name)
-		return
+func CreateWorkspace(path string, name string, about string) (w *Workspace, vn *validations.Validation, err error) {
+	if path, err = filepath.Abs(path); err != nil {
+		err = errors.ErrorWrap(err, "resolve directory")
 	}
+	if name == "" {
+		name = filepath.Base(path)
+	}
+
+	w = NewWorkspace()
+	w.Name = name
+	w.About = about
+
 	if vn = w.Validation(); vn.IsValid() {
 		w.Save()
 	}
 	return
 }
 
-func ResolveWorkspace(uc *UserContext, name string, loads ...string) (w *Workspace, err error) {
-	if uc == nil {
-		err = errors.Error("no user context")
+func ResolveWorkspace(loads ...string) (w *Workspace, err error) {
+	w = NewWorkspace()
+	if err = w.Load(loads...); err != nil {
 		return
 	}
-	if name == "" {
-		w = uc.Workspace
-		if w == nil {
-			err = errors.Error("no workspace context")
-			return
-		}
-	} else {
-		if len(uc.Workspaces) == 0 {
-			err = errors.Error("no workspaces exist")
-			return
-		}
-		w = uc.FindWorkspace(name)
-		if w == nil {
-			err = errors.Errorf("workspace %s does not exist", name)
-			return
-		}
-	}
-	if len(loads) > 0 {
-		if err = w.Load(loads...); err != nil {
-			return
-		}
+	if w.ID == 0 {
+		err = errors.Error("workspace is not initalized")
+		return
 	}
 	return
 }
@@ -173,16 +156,8 @@ func (w *Workspace) DirectoriesInspect() (dis []*DirectoryInspector, err error) 
 
 // Data
 
-func (w *Workspace) directory() (dirPath string) {
-	dirPath = utils.DataDir(filepath.Join("workspaces", w.Name))
-	return
-}
-
-func (w *Workspace) IsExists() (is bool) {
-	if w.UserContext.FindWorkspace(w.Name) != nil {
-		is = true
-		return
-	}
+func (w *Workspace) Directory() (dirPath string) {
+	dirPath = dirs.WorkspaceDir(".")
 	return
 }
 
@@ -192,12 +167,22 @@ func (w *Workspace) Load(loads ...string) (err error) {
 	return
 }
 
-func (w *Workspace) Assign(params map[string]any) {
-	if params["Name"] != nil {
-		w.Name = params["Name"].(string)
+func (w *Workspace) Clear(assocName string) {
+	queries.Clear(w, assocName)
+}
+
+// Record
+
+func (w *Workspace) Save() {
+	queries.Save(w)
+}
+
+func (w *Workspace) Assign(params map[string]string) {
+	if params["Name"] != "" {
+		w.Name = params["Name"]
 	}
-	if params["About"] != nil {
-		w.About = params["About"].(string)
+	if params["About"] != "" {
+		w.About = params["About"]
 	}
 }
 
@@ -212,7 +197,7 @@ func (w *Workspace) Validation() (vn *validations.Validation) {
 	return
 }
 
-func (w *Workspace) Update(updates map[string]any) (vn *validations.Validation) {
+func (w *Workspace) Update(updates map[string]string) (vn *validations.Validation) {
 	w.Assign(updates)
 	if vn = w.Validation(); vn.IsValid() {
 		w.Save()
@@ -220,22 +205,11 @@ func (w *Workspace) Update(updates map[string]any) (vn *validations.Validation) 
 	return
 }
 
-// Record
-
-func (w *Workspace) Save() {
-	queries.Save(w)
-}
-
-func (w *Workspace) Delete() {
-	utils.RemoveDir(w.directory())
-	queries.Delete(w)
-}
-
 // Associations
 
 func (w *Workspace) GitRepoDirectoryFor(uri string) (dirPath string) {
 	elem := []string{}
-	elem = append(elem, w.directory(), "repos")
+	elem = append(elem, w.Directory(), "repos")
 	elem = append(elem, strings.Split(uri, "/")...)
 	dirPath = filepath.Join(elem...)
 	return
@@ -288,6 +262,20 @@ func (w *Workspace) FindShaper(name string) (sr *Shaper) {
 		}
 	}
 	sr = nil
+	return
+}
+
+func (w *Workspace) FrameName() (n string) {
+	if w.Frame != nil {
+		n = w.Frame.Name
+	}
+	return
+}
+
+func (w *Workspace) ShapeName() (n string) {
+	if w.Shape != nil {
+		n = w.Shape.Name
+	}
 	return
 }
 

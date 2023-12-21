@@ -76,12 +76,18 @@ func (btn *Button) View() (v string) {
 			BorderBackground(lipgloss.Color("0"))
 	}
 
-	if btn.IsEnabled && (btn.IsFocus || btn.IsHover) {
+	if btn.IsEnabled && btn.IsFocus {
 		style = style.BorderForeground(lipgloss.Color("15"))
 		textStyle = textStyle.Foreground(lipgloss.Color(btn.Color))
 	} else {
 		style = style.BorderForeground(lipgloss.Color("8"))
-		textStyle = textStyle.Foreground(lipgloss.Color("7"))
+		textStyle = textStyle.Foreground(lipgloss.Color("8"))
+	}
+
+	if btn.IsEnabled && (btn.IsHover || btn.IsFocus) {
+		textStyle = textStyle.Foreground(lipgloss.Color(btn.Color))
+	} else {
+		textStyle = textStyle.Foreground(lipgloss.Color("8"))
 	}
 
 	v = zone.Mark(btn.ID, style.Render(textStyle.Render(btn.Text)))

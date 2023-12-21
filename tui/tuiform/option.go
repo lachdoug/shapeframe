@@ -3,42 +3,75 @@ package tuiform
 import (
 	"fmt"
 	"sf/models"
+	"sf/utils"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	zone "github.com/lrstanley/bubblezone"
 )
 
 type Option struct {
-	Value string
-	Label string
+	Field      *Field
+	Model      *models.FormOption
+	IsSelected bool
+	IsFocus    bool
+	IsHover    bool
 }
 
-func NewOption(fmpo *models.FormOption) (li *Option) {
+func NewOption(field *Field, model *models.FormOption) (li *Option) {
 	li = &Option{
-		Value: fmpo.Value,
-		Label: fmpo.Label,
+		Field: field,
+		Model: model,
 	}
 	return
 }
 
-func (li *Option) View(isFocussed bool, prefix string) (v string) {
-	style := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("7"))
-	if isFocussed {
-		style.Foreground(lipgloss.AdaptiveColor{Light: "0", Dark: "15"})
+func (opt *Option) ID() (id string) {
+	id = fmt.Sprintf("%s-option-%s", opt.Field.ID, opt.Model.Value)
+	return
+}
+
+func (opt *Option) View() (v string) {
+	prefix := " "
+	style := lipgloss.NewStyle()
+
+	if opt.IsHover {
+		style = style.Background(lipgloss.Color("0"))
+	}
+	if opt.Field.IsFocus {
+		if opt.IsFocus {
+			prefix = "⮞"
+		}
+	} else {
+		if !opt.IsSelected {
+			style = style.Foreground(lipgloss.Color("8"))
+		}
 	}
 
-	textstyle := style.Copy()
-	if isFocussed {
-		textstyle.Bold(true)
+	if opt.Field.Model.As == "checks" {
+		if opt.IsSelected {
+			prefix = fmt.Sprintf("%s %s", prefix, "🗹")
+		} else {
+			prefix = fmt.Sprintf("%s %s", prefix, "☐")
+		}
+	} else if opt.Field.Model.As == "radios" {
+		if opt.IsSelected {
+			prefix = fmt.Sprintf("%s %s", prefix, "◉")
+		} else {
+			prefix = fmt.Sprintf("%s %s", prefix, "○")
+		}
 	}
 
-	display := li.Label
-	if display == "" {
-		display = li.Value
-	}
-	v = textstyle.Render(display)
-	if prefix != "" {
-		v = fmt.Sprintf("%s  %s", style.Render(prefix), v)
-	}
+	line := utils.FixedLengthString(
+		fmt.Sprintf("%s %s", prefix, opt.Model.Label),
+		opt.Field.Width-2,
+	)
+
+	v = zone.Mark(opt.ID(), style.Render(line))
+	return
+}
+
+func (opt *Option) inBounds(msg tea.MouseMsg) (is bool) {
+	is = zone.Get(opt.ID()).InBounds(msg)
 	return
 }

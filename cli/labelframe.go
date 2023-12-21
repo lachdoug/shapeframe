@@ -14,13 +14,10 @@ func labelFrame() (command any) {
 			"sf label frame [options] [name]",
 			"Provide an optional frame name as an argument",
 			"  Uses frame context when not provided",
-			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
 			"Provide an optional frame update name using the -name flag",
 			"Provide an optional frame update about using the -about flag",
 		),
 		Flags: ss(
-			"string", "workspace", "Name of the workspace",
 			"string", "name", "New name for the frame",
 			"string", "about", "New about for the frame",
 		),
@@ -32,7 +29,7 @@ func labelFrame() (command any) {
 }
 
 func labelFrameHandler(context *cliapp.Context) (params *controllers.Params, err error) {
-	updates := map[string]any{}
+	updates := map[string]string{}
 	if context.IsSet("name") {
 		updates["Name"] = context.StringFlag("name")
 	}
@@ -42,9 +39,8 @@ func labelFrameHandler(context *cliapp.Context) (params *controllers.Params, err
 
 	params = &controllers.Params{
 		Payload: &controllers.FramesUpdateParams{
-			Workspace: context.StringFlag("workspace"),
-			Frame:     context.Argument(0),
-			Updates:   updates,
+			Frame:   context.Argument(0),
+			Updates: updates,
 		},
 	}
 	return

@@ -35,7 +35,7 @@ type FrameInspector struct {
 	Name          string
 	About         string
 	Framer        string
-	Configuration []map[string]string
+	Configuration *ConfigurationInspector
 	Relations     *FrameRelationsInspector
 	Shapes        []*ShapeInspector
 }
@@ -53,7 +53,7 @@ type FrameReader struct {
 	Workspace     string
 	Parent        string
 	Framer        string
-	Configuration []map[string]string
+	Configuration *Configuration
 	Shapes        []string
 }
 
@@ -62,7 +62,7 @@ type FrameOutput struct {
 	Workspace  string
 	Name       string
 	About      string
-	Config     map[string]string
+	Settings   map[string]string
 }
 
 // Construction
@@ -78,20 +78,21 @@ func NewFrame(w *Workspace, name string) (f *Frame) {
 func CreateFrame(w *Workspace, framer string, name string, about string) (f *Frame, vn *validations.Validation, err error) {
 	f = NewFrame(w, name)
 	f.FramerName = framer
+	f.About = about
 	if vn = f.FramerValidation(); vn.IsInvalid() {
 		return
 	}
 	if err = f.Load("Framer"); err != nil {
 		return
 	}
-	if name == "" {
+	if f.Name == "" {
 		f.Name = f.Framer.Name
 	}
-	if about == "" {
+	if f.About == "" {
 		f.About = f.Framer.About
 	}
 	if f.IsExists() {
-		err = errors.Errorf("frame %s already exists in workspace %s", name, w.Name)
+		err = errors.Errorf("frame %s already exists", f.Name)
 		return
 	}
 	if vn = f.Validation(); vn.IsValid() {
@@ -100,13 +101,13 @@ func CreateFrame(w *Workspace, framer string, name string, about string) (f *Fra
 	return
 }
 
-func ResolveFrame(uc *UserContext, w *Workspace, name string, loads ...string) (f *Frame, err error) {
+func ResolveFrame(w *Workspace, name string, loads ...string) (f *Frame, err error) {
 	if name == "" {
-		if uc == nil {
-			err = errors.Error("no user context")
+		if w == nil {
+			err = errors.Error("no workspace")
 			return
 		}
-		f = uc.Frame
+		f = w.Frame
 		if f == nil {
 			err = errors.Error("no frame context")
 			return
@@ -156,7 +157,7 @@ func (f *Frame) Inspect() (fi *FrameInspector, err error) {
 		Name:          f.Name,
 		About:         f.About,
 		Framer:        f.FramerName,
-		Configuration: f.Configuration.Info(),
+		Configuration: f.Configuration.Inspect(),
 		Relations:     ri,
 		Shapes:        f.ShapesInspect(),
 	}
@@ -198,7 +199,7 @@ func (f *Frame) Read() (fr *FrameReader) {
 		Workspace:     f.Workspace.Name,
 		Parent:        f.ParentName(),
 		Framer:        f.FramerName,
-		Configuration: f.Configuration.Info(),
+		Configuration: f.Configuration,
 		Shapes:        f.ShapeNames(),
 	}
 	return
@@ -220,12 +221,12 @@ func (f *Frame) Load(loads ...string) (err error) {
 	return
 }
 
-func (f *Frame) Assign(params map[string]any) {
-	if params["Name"] != nil {
-		f.Name = params["Name"].(string)
+func (f *Frame) Assign(params map[string]string) {
+	if params["Name"] != "" {
+		f.Name = params["Name"]
 	}
-	if params["About"] != nil {
-		f.About = params["About"].(string)
+	if params["About"] != "" {
+		f.About = params["About"]
 	}
 }
 
@@ -248,7 +249,7 @@ func (f *Frame) Validation() (vn *validations.Validation) {
 	return
 }
 
-func (f *Frame) Update(updates map[string]any) (vn *validations.Validation) {
+func (f *Frame) Update(updates map[string]string) (vn *validations.Validation) {
 	f.Assign(updates)
 	if vn = f.Validation(); vn.IsValid() {
 		f.Save()
@@ -394,7 +395,7 @@ func (f *Frame) Output() (o *FrameOutput) {
 		Workspace:  f.Workspace.Name,
 		Name:       f.Name,
 		About:      f.About,
-		Config:     f.Configuration.Settings,
+		Settings:   f.Configuration.Settings,
 	}
 	return
 }

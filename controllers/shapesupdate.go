@@ -6,10 +6,9 @@ import (
 )
 
 type ShapesUpdateParams struct {
-	Workspace string
-	Frame     string
-	Shape     string
-	Updates   map[string]any
+	Frame   string
+	Shape   string
+	Updates map[string]string
 }
 
 type ShapesUpdateResult struct {
@@ -33,20 +32,17 @@ func ShapesUpdate(params *Params) (result *Result, err error) {
 	var s *models.Shape
 	var vn *validations.Validation
 
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace", "Frame", "Shape",
-	)
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
-		"Frames",
+	if w, err = models.ResolveWorkspace(
+		"Frames", "Frame", "Shape",
 	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, p.Frame,
+	if f, err = models.ResolveFrame(w, p.Frame,
 		"Shapes",
 	); err != nil {
 		return
 	}
-	if s, err = models.ResolveShape(uc, f, p.Shape); err != nil {
+	if s, err = models.ResolveShape(w, f, p.Shape); err != nil {
 		return
 	}
 

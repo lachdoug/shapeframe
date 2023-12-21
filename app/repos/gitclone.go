@@ -1,6 +1,7 @@
 package repos
 
 import (
+	"sf/app/dirs"
 	"sf/app/streams"
 	"sf/utils"
 
@@ -11,7 +12,7 @@ import (
 func GitClone(dirPath string, url string, username string, password string, st *streams.Stream) {
 	defer st.Close()
 	var err error
-	tmp := utils.TempDir("clone")
+	tmp := dirs.TempDir("clone")
 	utils.RemoveDir(tmp)
 	utils.MakeDir(tmp)
 	o := &git.CloneOptions{
@@ -21,7 +22,7 @@ func GitClone(dirPath string, url string, username string, password string, st *
 			Password: password,
 		},
 
-		// Depth:    1,
+		// Depth:    1, go-git package has a bug when clone/pull depth 1 https://github.com/go-git/go-git/issues/305
 		Progress: st.Writer,
 	}
 	if _, err = git.PlainClone(tmp, false, o); err != nil {

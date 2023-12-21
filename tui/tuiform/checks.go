@@ -9,43 +9,34 @@ import (
 )
 
 type Checks struct {
-	Form           *Form
-	Field          *Field
-	Items          []*Option
-	SelectionIndex int
-	Selections     []int
-	Width          int
+	Field   *Field
+	Options []*Option
 }
 
-func NewChecks(fm *Form, f *Field) (cs *Checks) {
-	cs = &Checks{Form: fm, Field: f}
+func NewChecks(f *Field) (cs *Checks) {
+	cs = &Checks{Field: f}
 	return
 }
 
-func (cs *Checks) setWidth() {
-	cs.Width = cs.Field.Width
-}
-
-func (cs *Checks) setItems() {
+func (cs *Checks) setOptions() {
 	items := []*Option{}
-	for _, opt := range cs.Field.ComponentModel.Options {
-		items = append(items, NewOption(opt))
+	for _, model := range cs.Field.Model.Options {
+		items = append(items, NewOption(cs.Field, model))
 	}
-	cs.Items = items
+	cs.Options = items
 }
 
 func (cs *Checks) setSelections() {
-	ans := strings.Split(cs.Form.Answers[cs.Field.ComponentModel.Key], "\n")
-	for i, item := range cs.Field.ComponentModel.Options {
-		if slices.Contains(ans, item.Value) {
-			cs.Selections = append(cs.Selections, i)
+	ans := strings.Split(cs.Field.answer(), "\n")
+	for _, opt := range cs.Options {
+		if slices.Contains(ans, opt.Model.Value) {
+			opt.IsSelected = true
 		}
 	}
 }
 
 func (cs *Checks) Init() (c tea.Cmd) {
-	cs.setWidth()
-	cs.setItems()
+	cs.setOptions()
 	cs.setSelections()
 	return
 }
@@ -53,138 +44,123 @@ func (cs *Checks) Init() (c tea.Cmd) {
 func (cs *Checks) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 	m = cs
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
+	case tea.MouseMsg:
 		switch msg.Type {
-		case tea.KeyEnter:
-			c = cs.enter()
-			return
-		case tea.KeySpace:
-			cs.selectItem()
-			cs.answer()
-			return
-		// case tea.KeyTab:
-		// 	c = cs.next()
-		// 	return
-		// case tea.KeyShiftTab:
-		// 	c = cs.previous()
-		// 	return
-		case tea.KeyDown:
-			cs.down()
-			return
-		case tea.KeyUp:
-			cs.up()
-			return
+		case tea.MouseMotion:
+			for _, opt := range cs.Options {
+				if cs.Field.IsFocus && opt.inBounds(msg) {
+					opt.IsHover = true
+				} else {
+					opt.IsHover = false
+				}
+			}
+		case tea.MouseLeft:
+			if cs.Field.IsHover {
+				for _, opt := range cs.Options {
+					if opt.IsHover {
+						if opt.IsSelected {
+							opt.IsSelected = false
+						} else {
+							opt.IsSelected = true
+						}
+					}
+				}
+				cs.setAnswer()
+			}
 		}
-	case error:
-		panic(msg)
+	case tea.KeyMsg:
+		if cs.Field.IsFocus {
+			switch msg.Type {
+			case tea.KeyEnter:
+				c = cs.Field.enter()
+			case tea.KeySpace:
+				for _, opt := range cs.Options {
+					if opt.IsFocus {
+						if opt.IsSelected {
+							opt.IsSelected = false
+						} else {
+							opt.IsSelected = true
+						}
+					}
+				}
+				cs.setAnswer()
+			case tea.KeyDown:
+				cs.down()
+			case tea.KeyUp:
+				cs.up()
+			}
+		}
 	}
 	return
 }
 
 func (cs *Checks) View() (v string) {
-	style := lipgloss.NewStyle().
-		PaddingLeft(1).
-		Width(cs.Width)
-	if cs.Field.IsFocus {
-		style.BorderForeground(lipgloss.Color("15"))
+	vs := []string{}
+	for _, opt := range cs.Options {
+		vs = append(vs, opt.View())
+	}
+	v = lipgloss.JoinVertical(lipgloss.Left, vs...)
+	return
+}
+
+func (cs *Checks) setAnswer() {
+	cs.Field.setAnswer(cs.value())
+}
+
+func (cs *Checks) focus(aspect string) (c tea.Cmd) {
+	if aspect == "next" {
+		cs.Options[0].IsFocus = true
 	} else {
-		style.BorderForeground(lipgloss.Color("8"))
+		cs.Options[len(cs.Options)-1].IsFocus = true
 	}
-
-	v = style.Render(cs.body())
 	return
 }
 
-func (cs *Checks) body() (f string) {
-	lines := []string{}
-	for i, it := range cs.Items {
-		lines = append(lines,
-			cs.line(it,
-				slices.Contains(cs.Selections, i),
-				cs.Field.IsFocus && i == cs.SelectionIndex,
-			),
-		)
-	}
-	f = strings.Join(lines, "\n")
-	return
-}
-
-func (cs *Checks) line(it *Option, isSelected bool, isFocused bool) (s string) {
-	b := "☐"
-	if isSelected {
-		b = "🗹"
-	}
-	s = it.View(isFocused, b)
-	return
-}
-
-func (cs *Checks) selectItem() {
-	if slices.Contains(cs.Selections, cs.SelectionIndex) {
-		cs.Selections = slices.DeleteFunc(cs.Selections, func(i int) bool { return cs.SelectionIndex == i })
-	} else {
-		cs.Selections = append(cs.Selections, cs.SelectionIndex)
-		slices.Sort(cs.Selections)
+func (cs *Checks) blur() {
+	for _, opt := range cs.Options {
+		opt.IsFocus = false
 	}
 }
-
-func (cs *Checks) answer() {
-	cs.Field.set(cs.Field.ComponentModel.Key, cs.value())
-}
-
-func (cs *Checks) width() (w int) {
-	w = cs.Width
-	return
-}
-
-func (cs *Checks) resize() {
-	cs.setWidth()
-}
-
-func (cs *Checks) enter() (c tea.Cmd) {
-	c = cs.Field.enter()
-	return
-}
-
-// func (cs *Checks) next() (c tea.Cmd) {
-// 	c = cs.Field.next()
-// 	return
-// }
-
-// func (cs *Checks) previous() (c tea.Cmd) {
-// 	c = cs.Field.previous()
-// 	return
-// }
-
-func (cs *Checks) focus() tea.Cmd { return nil }
-func (cs *Checks) blur()          {}
-
-// func (cs *Checks) depend()            {}
-func (cs *Checks) set(string, string) {}
 
 func (cs *Checks) value() (v string) {
 	values := []string{}
-	for _, i := range cs.Selections {
-		it := cs.Items[i]
-		values = append(values, it.Value)
+	for _, opt := range cs.Options {
+		if opt.IsSelected {
+			values = append(values, opt.Model.Value)
+		}
 	}
 	v = strings.Join(values, "\n")
 	return
 }
 
-// func (cs *Checks) validity() string { return "" }
-
 func (cs *Checks) up() {
-	cs.SelectionIndex--
-	if cs.SelectionIndex == -1 {
-		cs.SelectionIndex++
+	index := 0
+	for i, opt := range cs.Options {
+		if opt.IsFocus {
+			index = i
+		}
+		opt.IsFocus = false
 	}
+	index = index - 1
+	if index == -1 {
+		index = 0
+	}
+	opt := cs.Options[index]
+	opt.IsFocus = true
 }
 
 func (cs *Checks) down() {
-	cs.SelectionIndex++
-	if cs.SelectionIndex == len(cs.Items) {
-		cs.SelectionIndex--
+	index := 0
+	for i, opt := range cs.Options {
+		if opt.IsFocus {
+			index = i
+		}
+		opt.IsFocus = false
 	}
+	index = index + 1
+	if index == len(cs.Options) {
+		index = index - 1
+	}
+	opt := cs.Options[index]
+	opt.IsFocus = true
 }
-
-// func (cs *Checks) shown() []string { return nil }

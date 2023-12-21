@@ -12,28 +12,9 @@ func listShapers() (command any) {
 		Aliases: ss("sr"),
 		Usage: ss(
 			"sf list shapers [options]",
-			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
-			"List shapers in all workspaces by setting the -all flag",
-			"  Otherwise lists shapers in workspace context",
-			"  Overrides -workspace flag",
 		),
-		Flags: ss(
-			"string", "workspace", "Workspace name",
-			"bool", "all", "All workspaces",
-		),
-		Handler:    listShapersHandler,
 		Controller: controllers.ShapersIndex,
 		Viewer:     listShapersViewer,
-	}
-	return
-}
-
-func listShapersHandler(context *cliapp.Context) (params *controllers.Params, err error) {
-	params = &controllers.Params{
-		Payload: &controllers.ShapersIndexParams{
-			Workspace: context.StringFlag("workspace"),
-		},
 	}
 	return
 }

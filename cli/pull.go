@@ -12,18 +12,14 @@ func pull() (command any) {
 		Summary: "Pull a workspace repository",
 		Aliases: ss("p"),
 		Usage: ss(
-			"sf pull [options] [URI]",
-			"A repository URI may be provided as an argument",
-			"  Otherwise prompt for URI",
-			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
+			"sf pull [options] URI",
+			"A repository URI must be provided as an argument",
 			"Include a username for HTTPS pull by setting the -username flag",
 			"  Otherwise performs git pull without a password when using HTTPS",
 			"Include a password (or access token) for HTTPS pull by setting the -password flag",
 			"  Otherwise performs git pull without a password when using HTTPS",
 		),
 		Flags: ss(
-			"string", "workspace", "Workspace name",
 			"string", "username u", "Username for git pull",
 			"string", "password p", "Password for git pull",
 		),
@@ -37,10 +33,9 @@ func pull() (command any) {
 func pullHandler(context *cliapp.Context) (params *controllers.Params, err error) {
 	params = &controllers.Params{
 		Payload: &controllers.RepositoryPullsCreateParams{
-			Workspace: context.StringFlag("workspace"),
-			URI:       context.Argument(0),
-			Username:  context.StringFlag("username"),
-			Password:  context.StringFlag("password"),
+			URI:      context.Argument(0),
+			Username: context.StringFlag("username"),
+			Password: context.StringFlag("password"),
 		},
 	}
 	return

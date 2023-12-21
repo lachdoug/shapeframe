@@ -6,10 +6,9 @@ import (
 )
 
 type FramesCreateParams struct {
-	Framer    string
-	Workspace string
-	Frame     string
-	About     string
+	Framer string
+	Frame  string
+	About  string
 }
 
 type FramesCreateResult struct {
@@ -23,8 +22,7 @@ func FramesCreate(params *Params) (result *Result, err error) {
 	var f *models.Frame
 	var vn *validations.Validation
 
-	uc := models.ResolveUserContext("Workspaces", "Workspace")
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
+	if w, err = models.ResolveWorkspace(
 		"Frames", "Framers",
 	); err != nil {
 		return

@@ -3,8 +3,7 @@ package controllers
 import "sf/models"
 
 type RepositoriesReadParams struct {
-	Workspace string
-	URI       string
+	URI string
 }
 
 func RepositoriesRead(params *Params) (result *Result, err error) {
@@ -13,10 +12,7 @@ func RepositoriesRead(params *Params) (result *Result, err error) {
 	var rr *models.RepositoryReader
 	p := params.Payload.(*RepositoriesReadParams)
 
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace",
-	)
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
+	if w, err = models.ResolveWorkspace(
 		"Repositories",
 	); err != nil {
 		return

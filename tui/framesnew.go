@@ -12,10 +12,10 @@ import (
 
 type FramesNew struct {
 	Body           *Body
+	FramerItems    []*controllers.FramersIndexItemResult
 	FormComponents []*models.FormComponent
 	FormAnswers    map[string]string
 	Form           *tuiform.Form
-	WorkspaceItems []*controllers.WorkspacesIndexItemResult
 }
 
 func newFramesNew(b *Body) (fn *FramesNew) {
@@ -24,11 +24,13 @@ func newFramesNew(b *Body) (fn *FramesNew) {
 }
 
 func (fn *FramesNew) Init() (c tea.Cmd) {
-	fn.setWorkspaceItems()
+	cs := []tea.Cmd{}
+	cs = append(cs, fn.setFramers())
 	fn.setFormComponents()
 	fn.setFormAnswers()
 	fn.setForm()
-	c = fn.Form.Init()
+	cs = append(cs, fn.Form.Init())
+	c = tea.Batch(cs...)
 	return
 }
 
@@ -44,21 +46,35 @@ func (fn *FramesNew) View() (v string) {
 }
 
 func (fn *FramesNew) setSize(w int, h int) {
-	fn.Form.SetSize(w, h)
+	fn.Form.SetWidth(w)
 }
 
-func (fn *FramesNew) workspaceOptions() (opts []*models.FormOption) {
+func (fn *FramesNew) setFramers() (c tea.Cmd) {
+	result := &controllers.Result{}
+	result, c = fn.Body.App.call(
+		controllers.FramersIndex,
+		nil,
+		tuisupport.Open(".."),
+	)
+	if result != nil {
+		fn.FramerItems = result.Payload.([]*controllers.FramersIndexItemResult)
+	}
+	return
+}
+
+func (fn *FramesNew) framerOptions() (opts []*models.FormOption) {
 	opts = []*models.FormOption{}
-	for _, w := range fn.WorkspaceItems {
-		opt := &models.FormOption{Value: w.Workspace}
-		opts = append(opts, opt)
+	for _, fr := range fn.FramerItems {
+		opts = append(opts, &models.FormOption{
+			Value: fr.Framer,
+		})
 	}
 	return
 }
 
 func (fn *FramesNew) setFormComponents() {
 	fn.FormComponents = []*models.FormComponent{
-		{Key: "Workspace", Type: "selects", Options: fn.workspaceOptions()},
+		{Key: "Framer", Type: "select", Options: fn.framerOptions()},
 		{Key: "Name"},
 		{Key: "About"},
 	}
@@ -71,50 +87,49 @@ func (fn *FramesNew) setFormAnswers() {
 	fn.FormAnswers = map[string]string{}
 }
 
-func (fn *FramesNew) setWorkspaceItems() {
-	result := fn.Body.call(
-		controllers.WorkspacesIndex,
-		nil,
-		"/",
-	)
-	if result != nil {
-		fn.WorkspaceItems = result.Payload.([]*controllers.WorkspacesIndexItemResult)
-	}
-}
-
 func (fn *FramesNew) setForm() {
 	fn.Form = tuiform.NewForm(
-		"workspaces-new",
-		"New workspace",
+		"frames-new",
+		"New frame",
 		fn.FormComponents,
-		nil,
+		fn.FormAnswers,
 		fn.submit,
 		fn.cancel,
 	)
 }
 
 func (fn *FramesNew) submit(answers map[string]string) (c tea.Cmd) {
-	result := fn.Body.call(
+	result := &controllers.Result{}
+	result, c = fn.Body.App.call(
 		controllers.FramesCreate,
 		&controllers.FramesCreateParams{
-			Frame: answers["Name"],
-			About: answers["About"],
+			Framer: answers["Framer"],
+			Frame:  answers["Name"],
+			About:  answers["About"],
 		},
-		".",
+		func() tea.Msg {
+			fn.Form.IsActive = true
+			return fn.Body.App.setFocus()
+		},
 	)
 	if result != nil {
 		id := result.Payload.(*controllers.FramesCreateResult).Frame
-		c = Open(fmt.Sprintf("../@%s", id))
+		c = tuisupport.Open(fmt.Sprintf("../@%s", id))
 	}
 	return
 }
 
 func (fn *FramesNew) cancel() (c tea.Cmd) {
-	c = Open("..")
+	c = tuisupport.Open("..")
 	return
 }
 
 func (fn *FramesNew) focusChain() (fc []tuisupport.Focuser) {
 	fc = fn.Form.FocusChain()
+	return
+}
+
+func (fn *FramesNew) isFocus() (is bool) {
+	is = fn.Form.IsFocus()
 	return
 }

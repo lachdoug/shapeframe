@@ -7,8 +7,7 @@ import (
 )
 
 type DirectoriesCreateParams struct {
-	Workspace string
-	Path      string
+	Path string
 }
 
 type DirectoriesCreateResult struct {
@@ -23,10 +22,7 @@ func DirectoriesCreate(params *Params) (result *Result, err error) {
 	var vn *validations.Validation
 	p := params.Payload.(*DirectoriesCreateParams)
 
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace",
-	)
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
+	if w, err = models.ResolveWorkspace(
 		"Directories",
 	); err != nil {
 		return

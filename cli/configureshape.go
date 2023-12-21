@@ -12,11 +12,9 @@ func configureShape() (command any) {
 		Summary: "Configure settings for a shape",
 		Aliases: ss("s"),
 		Usage: ss(
-			"sf configure shape [options] [value1] [value2] [value3]...",
+			"sf configure shape [options] SETTINGS",
 			"Configuration settings must be provided as the argument",
 			"  Encode settings as YAML (accepts JSON)",
-			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
 			"Provide an optional frame name using the -frame flag",
 			"  Is required if -workspace flag is set",
 			"  Otherwise uses frame context when not provided",
@@ -27,7 +25,6 @@ func configureShape() (command any) {
 			"  Prompt when when not provided",
 		),
 		Flags: ss(
-			"string", "workspace", "Name of the workspace",
 			"string", "frame", "Name of the frame",
 			"string", "shape", "Name of the shape",
 			"string", "password", "Password for secrets encryption key",
@@ -37,7 +34,8 @@ func configureShape() (command any) {
 		Viewer: cliapp.View(
 			"shapeconfigurations/update",
 			"configurations/configuration",
-			"configurations/datum",
+			"configurations/settings",
+			"configurations/setting",
 		),
 	}
 	return
@@ -51,10 +49,9 @@ func configureShapeParams(context *cliapp.Context) (params *controllers.Params, 
 
 	params = &controllers.Params{
 		Payload: &controllers.ShapeConfigurationsUpdateParams{
-			Workspace: context.StringFlag("workspace"),
-			Frame:     context.StringFlag("frame"),
-			Shape:     context.StringFlag("shape"),
-			Updates:   updates,
+			Frame:   context.StringFlag("frame"),
+			Shape:   context.StringFlag("shape"),
+			Updates: updates,
 		},
 	}
 	return

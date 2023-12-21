@@ -3,7 +3,7 @@
 Name: {{ .Name }}
 About: {{ .About }}
 Workspace: {{ .Workspace }}
-Parent: {{ if eq .Parent "" }}<none>{{ else }}{{ .Parent }}{{ end }}
+Parent: {{ if eq .Parent "" }}<unset>{{ else }}{{ .Parent }}{{ end }}
 Framer: {{ .Framer }}
 Configuration: {{ include "configurations/configuration" .Configuration }}
 Shapes: {{ include "frames/shapes" .Shapes }}

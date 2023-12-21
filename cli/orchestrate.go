@@ -13,15 +13,12 @@ func orchestrate() (command any) {
 		Aliases: ss("o"),
 		Usage: ss(
 			"sf orchestrate [options]",
-			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
 			"Provide an optional frame name using the -frame flag",
 			"  Is required if -workspace flag is set",
 			"  Uses frame context when not provided",
 		),
 		Flags: ss(
 			"string", "frame", "Frame name",
-			"string", "workspace", "Workspace name",
 		),
 		Handler:    orchestrateHandler,
 		Controller: controllers.FrameOrchestrationsCreate,
@@ -33,8 +30,7 @@ func orchestrate() (command any) {
 func orchestrateHandler(context *cliapp.Context) (params *controllers.Params, err error) {
 	params = &controllers.Params{
 		Payload: &controllers.FrameOrchestrationsCreateParams{
-			Workspace: context.StringFlag("workspace"),
-			Frame:     context.StringFlag("frame"),
+			Frame: context.StringFlag("frame"),
 		},
 	}
 	return

@@ -4,19 +4,11 @@ import (
 	"sf/models"
 )
 
-type WorkspaceInspectsReadParams struct {
-	Workspace string
-}
-
 func WorkspaceInspectsRead(params *Params) (result *Result, err error) {
 	var w *models.Workspace
 	var wi *models.WorkspaceInspector
-	p := params.Payload.(*WorkspaceInspectsReadParams)
 
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace",
-	)
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
+	if w, err = models.ResolveWorkspace(
 		"Framers", "Shapers",
 		"Frames.Parent", "Frames.Children",
 		"Frames.Configuration", "Frames.Shapes.Configuration",

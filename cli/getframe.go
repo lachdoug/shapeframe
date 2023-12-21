@@ -14,11 +14,6 @@ func getFrame() (command any) {
 			"sf get frame [options] [name]",
 			"Provide an optional frame name as an argument",
 			"  Uses frame context when not provided",
-			"Provide an optional workspace name using the -workspace flag",
-			"  Uses workspace context when not provided",
-		),
-		Flags: ss(
-			"string", "workspace", "Name of the workspace",
 		),
 		Handler:    getFrameHandler,
 		Controller: controllers.FramesRead,
@@ -26,7 +21,8 @@ func getFrame() (command any) {
 			"frames/read",
 			"frames/shapes",
 			"configurations/configuration",
-			"configurations/datum",
+			"configurations/settings",
+			"configurations/setting",
 		),
 	}
 	return
@@ -35,8 +31,7 @@ func getFrame() (command any) {
 func getFrameHandler(context *cliapp.Context) (params *controllers.Params, err error) {
 	params = &controllers.Params{
 		Payload: &controllers.FramesReadParams{
-			Workspace: context.StringFlag("workspace"),
-			Frame:     context.Argument(0),
+			Frame: context.Argument(0),
 		},
 	}
 	return

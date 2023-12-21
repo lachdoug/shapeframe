@@ -5,8 +5,7 @@ import (
 )
 
 type FramesReadParams struct {
-	Workspace string
-	Frame     string
+	Frame string
 }
 
 func FramesRead(params *Params) (result *Result, err error) {
@@ -14,16 +13,13 @@ func FramesRead(params *Params) (result *Result, err error) {
 	var f *models.Frame
 	p := params.Payload.(*FramesReadParams)
 
-	uc := models.ResolveUserContext(
-		"Workspaces", "Workspace", "Frame",
-	)
-	if w, err = models.ResolveWorkspace(uc, p.Workspace,
-		"Frames",
+	if w, err = models.ResolveWorkspace(
+		"Frames", "Frame",
 	); err != nil {
 		return
 	}
-	if f, err = models.ResolveFrame(uc, w, p.Frame,
-		"Workspace", "Configuration", "Shapes", "Parent",
+	if f, err = models.ResolveFrame(w, p.Frame,
+		"Workspace", "Configuration.Info", "Shapes", "Parent",
 	); err != nil {
 		return
 	}
