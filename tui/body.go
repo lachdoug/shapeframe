@@ -15,7 +15,6 @@ type Body struct {
 	Component Componenter
 	Viewport  viewport.Model
 	Footer    *stickers.FlexBox
-	Error     *Error
 	Width     int
 	Height    int
 	Scrollers []*tuisupport.Scroller
@@ -39,13 +38,8 @@ func (b *Body) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 	m = b
 	b.Viewport, c = b.Viewport.Update(msg)
 	cs := []tea.Cmd{c}
-	if b.Error == nil {
-		_, c = b.Component.Update(msg)
-		cs = append(cs, c)
-	} else {
-		_, c = b.Error.Update(msg)
-		cs = append(cs, c)
-	}
+	_, c = b.Component.Update(msg)
+	cs = append(cs, c)
 	for _, s := range b.Scrollers {
 		_, c = s.Update(msg)
 		cs = append(cs, c)
@@ -55,12 +49,7 @@ func (b *Body) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 }
 
 func (b *Body) View() (v string) {
-	if b.Error == nil {
-		v = b.Component.View()
-	} else {
-		v = b.Error.View()
-	}
-	b.Viewport.SetContent(v)
+	b.Viewport.SetContent(b.Component.View())
 	b.setFooter()
 	v = lipgloss.JoinVertical(lipgloss.Left,
 		b.Viewport.View(),
@@ -73,9 +62,7 @@ func (b *Body) setSize(w int, h int) {
 	b.Width = w
 	b.Height = h
 	b.setViewportSize()
-	if b.Error == nil {
-		b.Component.setSize(w, h)
-	}
+	b.Component.setSize(w, h)
 }
 
 func (b *Body) setViewport() (c tea.Cmd) {
@@ -136,11 +123,7 @@ func (b *Body) setComponent() (c tea.Cmd) {
 }
 
 func (b *Body) focusChain() (fc []tuisupport.Focuser) {
-	if b.Error == nil {
-		fc = append(fc, b.Component.focusChain()...)
-	} else {
-		fc = b.Error.focusChain()
-	}
+	fc = append(fc, b.Component.focusChain()...)
 	fc = append(fc,
 		b.Scrollers[0],
 		b.Scrollers[1],

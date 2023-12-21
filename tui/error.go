@@ -15,7 +15,17 @@ type Error struct {
 	Callback tea.Cmd
 }
 
+type ErrorMsg struct {
+	Err      error
+	Callback tea.Cmd
+}
+
 type ClearErrorMsg struct{}
+
+func newErrorMsg(err error, callback tea.Cmd) (emsg ErrorMsg) {
+	emsg = ErrorMsg{Err: err, Callback: callback}
+	return
+}
 
 func newError(body *Body, err error, callback tea.Cmd) (e *Error) {
 	e = &Error{Body: body, Message: err.Error(), Callback: callback}
@@ -56,10 +66,5 @@ func (e *Error) sendClearMsg() (c tea.Cmd) {
 
 func (e *Error) focusChain() (fc []tuisupport.Focuser) {
 	fc = []tuisupport.Focuser{e.OK}
-	return
-}
-
-func (e *Error) isFocus() (is bool) {
-	is = e.OK.IsFocus
 	return
 }

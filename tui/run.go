@@ -9,6 +9,7 @@ import (
 
 func Run() {
 	if _, err := newTApp(newApp()).Run(); err != nil {
+		panic("APP EXIT WITH ERROR")
 		errors.ErrorHandler(err)
 	}
 }

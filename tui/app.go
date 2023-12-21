@@ -23,6 +23,7 @@ type App struct {
 	Height     int
 	FocusChain []tuisupport.Focuser
 	FocusIndex int
+	Error      *Error
 }
 
 func newApp() (a *App) {
@@ -42,21 +43,13 @@ func (a *App) Init() (c tea.Cmd) {
 	return
 }
 
-func (a *App) focusOn(target tuisupport.Focuser) (c tea.Cmd) {
-	for i, f := range a.FocusChain {
-		if f == target {
-			a.blur()
-			a.FocusIndex = i
-			c = a.Focus("next")
-			break
-		}
-	}
-	return
-}
-
 func (a *App) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 	m = a
 	cs := []tea.Cmd{}
+	if a.Error != nil {
+		_, c = a.Error.Update(msg)
+		return
+	}
 	switch msg := msg.(type) {
 	case tuisupport.NavigationMsg:
 		c = a.open(msg.Path)
@@ -69,7 +62,7 @@ func (a *App) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 		c = a.focusOn(msg)
 		return
 	case ClearErrorMsg:
-		a.Body.Error = nil
+		a.Error = nil
 		return
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -82,15 +75,23 @@ func (a *App) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 		case tea.KeyShiftTab:
 			c = a.previous()
 			return
-		case tea.KeyCtrlLeft:
-			c = tuisupport.Open("..")
-			return
 		}
 	case tea.WindowSizeMsg:
 		a.Width = msg.Width
 		a.Height = msg.Height
 		a.setSize()
 		cs = append(cs, tea.ClearScreen)
+	case ErrorMsg:
+		a.Error = newError(
+			a.Body,
+			msg.Err,
+			msg.Callback,
+		)
+		c = tea.Batch(
+			a.Error.Init(),
+			a.setFocus(),
+		)
+		return
 	}
 	_, c = a.TopBar.Update(msg)
 	cs = append(cs, c)
@@ -103,13 +104,16 @@ func (a *App) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 }
 
 func (a *App) View() (v string) {
-	v = zone.Scan(
-		lipgloss.JoinVertical(lipgloss.Left,
+	if a.Error == nil {
+		v = lipgloss.JoinVertical(lipgloss.Left,
 			a.TopBar.View(),
 			a.TopNav.View(),
 			a.Body.View(),
-		),
-	)
+		)
+	} else {
+		v = a.Error.View()
+	}
+	v = zone.Scan(v)
 	return
 }
 
@@ -129,7 +133,6 @@ func (a *App) setSize() {
 }
 
 func (a *App) open(path string) (c tea.Cmd) {
-	a.Body.Error = nil
 	a.blur()
 	if path[:1] == "/" {
 		a.Path = path
@@ -157,12 +160,31 @@ func (a *App) MatchRoute(route string) (is bool, captures []string) {
 }
 
 func (a *App) setFocus() (c tea.Cmd) {
+	a.blur()
 	a.FocusChain = []tuisupport.Focuser{}
-	a.FocusChain = append(a.FocusChain, a.TopBar.focusChain()...)
-	a.FocusChain = append(a.FocusChain, a.TopNav.focusChain()...)
-	a.FocusChain = append(a.FocusChain, a.Body.focusChain()...)
-	a.FocusIndex = a.navFocusIndex()
+	if a.Error == nil {
+		a.FocusChain = append(a.FocusChain, a.TopBar.focusChain()...)
+		a.FocusChain = append(a.FocusChain, a.TopNav.focusChain()...)
+		a.FocusChain = append(a.FocusChain, a.Body.focusChain()...)
+		a.FocusIndex = a.navFocusIndex()
+	} else {
+		a.FocusIndex = 0
+		a.FocusChain = a.Error.focusChain()
+	}
+
 	c = a.Focus("next")
+	return
+}
+
+func (a *App) focusOn(target tuisupport.Focuser) (c tea.Cmd) {
+	for i, f := range a.FocusChain {
+		if f == target {
+			a.blur()
+			a.FocusIndex = i
+			c = a.Focus("next")
+			break
+		}
+	}
 	return
 }
 
@@ -182,6 +204,9 @@ func (a *App) Focus(aspect string) (c tea.Cmd) {
 }
 
 func (a *App) blur() {
+	if len(a.FocusChain) == 0 {
+		return
+	}
 	a.FocusChain[a.FocusIndex].Blur()
 }
 
@@ -215,17 +240,7 @@ func (a *App) call(
 		err = errors.ValidationError(result.Validation.Maps())
 	}
 	if err != nil {
-		a.blur()
-		result = nil
-		a.Body.Error = newError(
-			a.Body,
-			err,
-			callback,
-		)
-		c = tea.Batch(
-			a.Body.Error.Init(),
-			a.setFocus(),
-		)
+		c = func() tea.Msg { return newErrorMsg(err, callback) }
 	}
 	return
 }

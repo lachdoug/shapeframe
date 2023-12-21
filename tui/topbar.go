@@ -24,7 +24,7 @@ func newTopBar(a *App) (tb *TopBar) {
 }
 
 func (tb *TopBar) Init() (c tea.Cmd) {
-	tb.setReader()
+	c = tb.setReader()
 	tb.setComponents()
 	return
 }
@@ -44,13 +44,18 @@ func (tb *TopBar) View() (v string) {
 	style := lipgloss.NewStyle().Width(tb.Width).Height(2)
 	leftpadStyle := lipgloss.NewStyle().PaddingLeft(1)
 	nameStyle := leftpadStyle.Copy().Bold(true)
-	about := utils.FixedLengthString(tb.Reader.About, tb.Width-len(tb.Reader.Name)-12)
+	name := ""
+	about := ""
 	path := utils.FixedLengthString(tb.App.Path, tb.Width-3)
+	if tb.Reader != nil {
+		name = tb.Reader.Name
+		about = utils.FixedLengthString(tb.Reader.About, tb.Width-len(tb.Reader.Name)-12)
+	}
 	v = style.Render(
 		lipgloss.JoinVertical(lipgloss.Left,
 			lipgloss.JoinHorizontal(lipgloss.Top,
 				tb.Title.View(),
-				nameStyle.Render(tb.Reader.Name),
+				nameStyle.Render(name),
 				leftpadStyle.Render(about),
 			),
 			lipgloss.JoinHorizontal(lipgloss.Top,
@@ -84,7 +89,7 @@ func (tb *TopBar) setReader() (c tea.Cmd) {
 	result, c = tb.App.call(
 		controllers.WorkspacesRead,
 		nil,
-		func() tea.Msg { return tuisupport.Open(".") },
+		tea.Quit,
 	)
 	if result != nil {
 		tb.Reader = result.Payload.(*models.WorkspaceReader)
