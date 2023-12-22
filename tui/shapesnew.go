@@ -89,9 +89,9 @@ func (sn *ShapesNew) frameOptions() (opts []*models.FormOption) {
 
 func (sn *ShapesNew) shaperOptions() (opts []*models.FormOption) {
 	opts = []*models.FormOption{}
-	for _, sr := range sn.ShaperItems {
+	for _, srspecitem := range sn.ShaperItems {
 		opts = append(opts, &models.FormOption{
-			Value: sr.Shaper,
+			Value: srspecitem.Shaper,
 		})
 	}
 	return

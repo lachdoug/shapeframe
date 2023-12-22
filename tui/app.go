@@ -23,7 +23,7 @@ type App struct {
 	Height     int
 	FocusChain []tuisupport.Focuser
 	FocusIndex int
-	Error      *Error
+	Error      *tuisupport.Error
 }
 
 func newApp() (a *App) {
@@ -61,7 +61,7 @@ func (a *App) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 	case tuisupport.TakeFocus:
 		c = a.focusOn(msg)
 		return
-	case ClearErrorMsg:
+	case tuisupport.ClearErrorMsg:
 		a.Error = nil
 		return
 	case tea.KeyMsg:
@@ -81,9 +81,8 @@ func (a *App) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 		a.Height = msg.Height
 		a.setSize()
 		cs = append(cs, tea.ClearScreen)
-	case ErrorMsg:
-		a.Error = newError(
-			a.Body,
+	case tuisupport.ErrorMsg:
+		a.Error = tuisupport.NewError(
 			msg.Err,
 			msg.Callback,
 		)
@@ -169,7 +168,7 @@ func (a *App) setFocus() (c tea.Cmd) {
 		a.FocusIndex = a.navFocusIndex()
 	} else {
 		a.FocusIndex = 0
-		a.FocusChain = a.Error.focusChain()
+		a.FocusChain = a.Error.FocusChain()
 	}
 
 	c = a.Focus("next")
@@ -240,7 +239,7 @@ func (a *App) call(
 		err = errors.ValidationError(result.Validation.Maps())
 	}
 	if err != nil {
-		c = func() tea.Msg { return newErrorMsg(err, callback) }
+		c = func() tea.Msg { return tuisupport.NewErrorMsg(err, callback) }
 	}
 	return
 }

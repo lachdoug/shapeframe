@@ -1,8 +1,7 @@
-package tui
+package tuisupport
 
 import (
 	"fmt"
-	"sf/tui/tuisupport"
 	"sf/utils"
 	"strings"
 
@@ -187,7 +186,7 @@ func (t *Table) zoneMark(id string, property string, value string) (z string) {
 	return
 }
 
-func (t *Table) setSize(w int, h int) {
+func (t *Table) SetSize(w int, h int) {
 	t.Width = w
 	t.Height = h
 	t.setPageSize()
@@ -198,7 +197,7 @@ func (t *Table) setSize(w int, h int) {
 }
 
 func (t *Table) enter() (c tea.Cmd) {
-	c = tuisupport.Open(t.Navigator(t.selectedID()))
+	c = Open(t.Navigator(t.selectedID()))
 	return
 }
 

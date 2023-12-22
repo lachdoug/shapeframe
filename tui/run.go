@@ -1,16 +1,13 @@
 package tui
 
 import (
-	"sf/app/errors"
-
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
 )
 
 func Run() {
 	if _, err := newTApp(newApp()).Run(); err != nil {
-		panic("APP EXIT WITH ERROR")
-		errors.ErrorHandler(err)
+		panic(err)
 	}
 }
 

@@ -13,7 +13,7 @@ import (
 type TopBar struct {
 	App    *App
 	Title  *Title
-	Back   *Back
+	Back   *tuisupport.Back
 	Reader *models.WorkspaceReader
 	Width  int
 }
@@ -73,7 +73,7 @@ func (tb *TopBar) setSize(w int) {
 
 func (tb *TopBar) setComponents() {
 	tb.Title = newTitle(tb)
-	tb.Back = newBack(tb)
+	tb.Back = tuisupport.NewBack()
 }
 
 func (tb *TopBar) focusChain() (fc []tuisupport.Focuser) {

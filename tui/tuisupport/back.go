@@ -1,21 +1,18 @@
-package tui
+package tuisupport
 
 import (
-	"sf/tui/tuisupport"
-
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	zone "github.com/lrstanley/bubblezone"
 )
 
 type Back struct {
-	TopBar  *TopBar
 	IsHover bool
 	IsFocus bool
 }
 
-func newBack(tb *TopBar) (b *Back) {
-	b = &Back{TopBar: tb}
+func NewBack() (b *Back) {
+	b = &Back{}
 	return
 }
 
@@ -75,6 +72,6 @@ func (b *Back) Blur() {
 }
 
 func (b *Back) enter() (c tea.Cmd) {
-	c = tuisupport.Open("..")
+	c = Open("..")
 	return
 }

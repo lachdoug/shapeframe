@@ -11,7 +11,7 @@ import (
 type ShapesIndex struct {
 	Body  *Body
 	Items []*controllers.ShapesIndexItemResult
-	Table *Table
+	Table *tuisupport.Table
 }
 
 func newShapesIndex(b *Body) (si *ShapesIndex) {
@@ -37,7 +37,7 @@ func (si *ShapesIndex) View() (v string) {
 }
 
 func (si *ShapesIndex) setSize(w int, h int) {
-	si.Table.setSize(w, h)
+	si.Table.SetSize(w, h)
 }
 
 func (si *ShapesIndex) setItems() (c tea.Cmd) {
@@ -68,7 +68,7 @@ func (si *ShapesIndex) setTable() {
 		p = fmt.Sprintf("/shapes/@%s", id)
 		return
 	}
-	si.Table = NewTable("shapes", propeties, data, navigator)
+	si.Table = tuisupport.NewTable("shapes", propeties, data, navigator)
 }
 
 func (si *ShapesIndex) focusChain() (fc []tuisupport.Focuser) {

@@ -11,7 +11,7 @@ import (
 type FramesIndex struct {
 	Body  *Body
 	Items []*controllers.FramesIndexItemResult
-	Table *Table
+	Table *tuisupport.Table
 }
 
 func newFramesIndex(b *Body) (fi *FramesIndex) {
@@ -37,7 +37,7 @@ func (fi *FramesIndex) View() (v string) {
 }
 
 func (fi *FramesIndex) setSize(w int, h int) {
-	fi.Table.setSize(w, h)
+	fi.Table.SetSize(w, h)
 }
 
 func (fi *FramesIndex) setItems() (c tea.Cmd) {
@@ -67,7 +67,7 @@ func (fi *FramesIndex) setTable() {
 		p = fmt.Sprintf("/frames/@%s", id)
 		return
 	}
-	fi.Table = NewTable("frames", propeties, data, navigator)
+	fi.Table = tuisupport.NewTable("frames", propeties, data, navigator)
 }
 
 func (fi *FramesIndex) focusChain() (fc []tuisupport.Focuser) {

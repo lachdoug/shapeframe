@@ -1,17 +1,15 @@
-package tui
+package tuisupport
 
 import (
 	"fmt"
-	"sf/tui/tuisupport"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 type Error struct {
-	Body     *Body
 	Message  string
-	OK       *tuisupport.Button
+	OK       *Button
 	Callback tea.Cmd
 }
 
@@ -22,13 +20,13 @@ type ErrorMsg struct {
 
 type ClearErrorMsg struct{}
 
-func newErrorMsg(err error, callback tea.Cmd) (emsg ErrorMsg) {
+func NewErrorMsg(err error, callback tea.Cmd) (emsg ErrorMsg) {
 	emsg = ErrorMsg{Err: err, Callback: callback}
 	return
 }
 
-func newError(body *Body, err error, callback tea.Cmd) (e *Error) {
-	e = &Error{Body: body, Message: err.Error(), Callback: callback}
+func NewError(err error, callback tea.Cmd) (e *Error) {
+	e = &Error{Message: err.Error(), Callback: callback}
 	return
 }
 
@@ -54,7 +52,7 @@ func (e *Error) View() (v string) {
 }
 
 func (e *Error) setOK() {
-	e.OK = tuisupport.NewButton("error-ok", " OK ", e.sendClearMsg, 15)
+	e.OK = NewButton("error-ok", " OK ", e.sendClearMsg, 15)
 }
 
 func (e *Error) sendClearMsg() (c tea.Cmd) {
@@ -64,7 +62,7 @@ func (e *Error) sendClearMsg() (c tea.Cmd) {
 	return
 }
 
-func (e *Error) focusChain() (fc []tuisupport.Focuser) {
-	fc = []tuisupport.Focuser{e.OK}
+func (e *Error) FocusChain() (fc []Focuser) {
+	fc = []Focuser{e.OK}
 	return
 }
