@@ -1,6 +1,8 @@
 package tuiform
 
 import (
+	"sf/app/logs"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -31,6 +33,7 @@ func (i *Input) Init() (c tea.Cmd) {
 }
 
 func (i *Input) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
+	m = i
 	if i.Field.IsFocus {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
@@ -39,12 +42,12 @@ func (i *Input) Update(msg tea.Msg) (m tea.Model, c tea.Cmd) {
 				c = i.Field.enter()
 				return
 			default:
+				i.TextInput, c = i.TextInput.Update(msg)
 				if i.validity() == "" {
 					i.setAnswer()
 				}
 			}
 		}
-		i.TextInput, c = i.TextInput.Update(msg)
 	}
 	return
 }
@@ -56,6 +59,7 @@ func (i *Input) View() (v string) {
 }
 
 func (i *Input) setAnswer() {
+	logs.Print(i.value())
 	i.Field.setAnswer(i.value())
 }
 
