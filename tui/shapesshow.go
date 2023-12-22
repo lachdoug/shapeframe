@@ -5,7 +5,6 @@ import (
 	"sf/controllers"
 	"sf/models"
 	"sf/tui/tuisupport"
-	"sf/utils"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -81,7 +80,7 @@ func (ss *ShapesShow) View() (v string) {
 				ss.viewLabel(),
 				ss.viewFrame(),
 				ss.viewConfiguration(),
-				string(utils.YamlMarshal(ss.Reader)),
+				// string(utils.YamlMarshal(ss.Reader)),
 			),
 		),
 		ss.Delete.View(),
